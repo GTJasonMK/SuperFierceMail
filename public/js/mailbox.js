@@ -45,26 +45,26 @@ function initializeElements() {
     emailList: document.getElementById('email-list'),
     emptyState: document.getElementById('empty-state'),
     listLoading: document.getElementById('list-loading'),
-    
+
     // 分页
     listPager: document.getElementById('list-pager'),
     prevPageBtn: document.getElementById('prev-page'),
     nextPageBtn: document.getElementById('next-page'),
     pageInfo: document.getElementById('page-info'),
-    
+
     // 模态框
     emailModal: document.getElementById('email-modal'),
     modalSubject: document.getElementById('modal-subject'),
     modalContent: document.getElementById('modal-content'),
     modalCloseBtn: document.getElementById('modal-close'),
-    
+
     // 确认模态框
     confirmModal: document.getElementById('confirm-modal'),
     confirmMessage: document.getElementById('confirm-message'),
     confirmOkBtn: document.getElementById('confirm-ok'),
     confirmCancelBtn: document.getElementById('confirm-cancel'),
     confirmCloseBtn: document.getElementById('confirm-close'),
-    
+
     // 密码修改模态框
     passwordModal: document.getElementById('password-modal'),
     passwordForm: document.getElementById('password-form'),
@@ -74,7 +74,17 @@ function initializeElements() {
     passwordClose: document.getElementById('password-close'),
     passwordCancel: document.getElementById('password-cancel'),
     passwordSubmit: document.getElementById('password-submit'),
-    
+
+    // 写邮件模态框
+    composeBtn: document.getElementById('compose-btn'),
+    composeModal: document.getElementById('compose-modal'),
+    composeClose: document.getElementById('compose-close'),
+    composeTo: document.getElementById('compose-to'),
+    composeSubject: document.getElementById('compose-subject'),
+    composeBody: document.getElementById('compose-body'),
+    composeCancel: document.getElementById('compose-cancel'),
+    composeSend: document.getElementById('compose-send'),
+
     // 导航
     logoutBtn: document.getElementById('logout'),
 
@@ -125,6 +135,10 @@ async function initializeAuth() {
       currentMailbox = data.mailbox || data.username;
       updateCurrentMailbox();
       await loadEmails();
+      // 非管理员隐藏写邮件按钮
+      if (elements.composeBtn) {
+        elements.composeBtn.style.display = 'none';
+      }
     }
 
     updateRoleBadge();
@@ -248,7 +262,13 @@ function bindEvents() {
   
   // 密码表单提交
   elements.passwordForm?.addEventListener('submit', handlePasswordChange);
-  
+
+  // 写邮件功能
+  elements.composeBtn?.addEventListener('click', showComposeModal);
+  elements.composeClose?.addEventListener('click', closeComposeModal);
+  elements.composeCancel?.addEventListener('click', closeComposeModal);
+  elements.composeSend?.addEventListener('click', sendEmail);
+
   // 分页
   elements.prevPageBtn?.addEventListener('click', () => changePage(currentPage - 1));
   elements.nextPageBtn?.addEventListener('click', () => changePage(currentPage + 1));
@@ -269,6 +289,12 @@ function bindEvents() {
   elements.passwordModal?.addEventListener('click', (e) => {
     if (e.target === elements.passwordModal) {
       closePasswordModal();
+    }
+  });
+
+  elements.composeModal?.addEventListener('click', (e) => {
+    if (e.target === elements.composeModal) {
+      closeComposeModal();
     }
   });
 }
@@ -365,6 +391,7 @@ function renderEmailList() {
 
 /**
  * 创建邮件项元素
+ * 从 raw_content 提取验证码和预览
  */
 function createEmailItem(email) {
   const item = document.createElement('div');
@@ -372,21 +399,21 @@ function createEmailItem(email) {
   item.onclick = () => viewEmailDetail(email.id);
   try{ item.dataset.id = String(email.id); }catch(_){ }
 
-  // 统一与普通用户列表的预览与验证码提取逻辑
-  const raw = (email.preview || email.content || email.html_content || '').toString();
-  const plain = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  const listCode = (email.verification_code || '').toString().trim() || extractCode(`${email.subject || ''} ${plain}`);
+  // 从原始内容提取验证码
+  const rawText = (email.raw_content || '').toString();
+  const listCode = extractCode(email.subject + ' ' + rawText);
+
+  // 生成预览（去掉邮件头，取正文前100字符）
   let preview = '';
-  if (plain) {
-    preview = plain;
-    if (listCode) preview = `验证码: ${listCode} | ${preview}`;
-    preview = preview.slice(0, 20);
+  const bodyStart = rawText.indexOf('\r\n\r\n');
+  if (bodyStart > 0) {
+    const bodyText = rawText.slice(bodyStart + 4).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    preview = bodyText.slice(0, 80);
   }
-  const hasContent = preview.length > 0;
+
   const timeText = formatTime(email.received_at);
   const senderText = escapeHtml(email.sender || '');
   const subjectText = escapeHtml(email.subject || '(无主题)');
-  const previewText = escapeHtml(preview);
 
   item.innerHTML = `
     <div class="email-meta">
@@ -399,14 +426,21 @@ function createEmailItem(email) {
           <span class="label-chip">主题</span>
           <span class="value-text subject">${subjectText}</span>
         </div>
+        ${listCode ? `
         <div class="email-line">
-          <span class="label-chip">内容</span>
-          ${hasContent ? `<span class="email-preview value-text">${previewText}</span>` : '<span class="email-preview value-text" style="color:#94a3b8">(暂无预览)</span>'}
+          <span class="label-chip" style="background:#10b981;color:#fff">验证码</span>
+          <span class="value-text" style="font-weight:600;color:#10b981;font-size:16px">${escapeHtml(listCode)}</span>
         </div>
+        ` : (preview ? `
+        <div class="email-line">
+          <span class="label-chip">预览</span>
+          <span class="value-text" style="color:#64748b;font-size:12px">${escapeHtml(preview)}...</span>
+        </div>
+        ` : '')}
       </div>
       <div class="email-actions">
-        <button class="btn btn-secondary btn-sm" data-code="${listCode || ''}" onclick="copyFromList(event, ${email.id})" title="复制内容或验证码">
-          <span class="btn-icon">📋</span>
+        <button class="btn btn-secondary btn-sm" data-code="${listCode || ''}" onclick="copyFromList(event, ${email.id})" title="${listCode ? '复制验证码' : '查看详情'}">
+          <span class="btn-icon">${listCode ? '📋' : '👁'}</span>
         </button>
       </div>
     </div>
@@ -781,29 +815,29 @@ function closePasswordModal() {
  */
 async function handlePasswordChange(e) {
   e.preventDefault();
-  
+
   const currentPassword = elements.currentPasswordInput?.value?.trim();
   const newPassword = elements.newPasswordInput?.value?.trim();
   const confirmPassword = elements.confirmPasswordInput?.value?.trim();
-  
+
   if (!currentPassword || !newPassword || !confirmPassword) {
     showToast('请填写所有字段', 'error');
     return;
   }
-  
+
   if (newPassword.length < 6) {
     showToast('新密码长度至少6位', 'error');
     return;
   }
-  
+
   if (newPassword !== confirmPassword) {
     showToast('两次输入的新密码不一致', 'error');
     return;
   }
-  
+
   try {
     showLoading(true);
-    
+
     const response = await fetch('/api/mailbox/password', {
       method: 'PUT',
       headers: {
@@ -815,9 +849,9 @@ async function handlePasswordChange(e) {
         newPassword
       })
     });
-    
+
     const result = await response.json();
-    
+
     if (response.ok && result.success) {
       showToast('密码修改成功', 'success');
       closePasswordModal();
@@ -829,6 +863,113 @@ async function handlePasswordChange(e) {
     showToast('网络错误，请重试', 'error');
   } finally {
     showLoading(false);
+  }
+}
+
+/**
+ * 显示写邮件模态框
+ */
+function showComposeModal() {
+  if (!currentMailbox) {
+    showToast('请先选择邮箱', 'warn');
+    return;
+  }
+  if (elements.composeModal) {
+    // 清空表单
+    if (elements.composeTo) elements.composeTo.value = '';
+    if (elements.composeSubject) elements.composeSubject.value = '';
+    if (elements.composeBody) elements.composeBody.value = '';
+    elements.composeModal.classList.add('show');
+    elements.composeTo?.focus();
+  }
+}
+
+/**
+ * 关闭写邮件模态框
+ */
+function closeComposeModal() {
+  if (elements.composeModal) {
+    elements.composeModal.classList.remove('show');
+  }
+}
+
+/**
+ * 发送邮件
+ */
+async function sendEmail() {
+  const to = elements.composeTo?.value?.trim();
+  const subject = elements.composeSubject?.value?.trim();
+  const body = elements.composeBody?.value?.trim();
+
+  if (!to) {
+    showToast('请输入收件人地址', 'warn');
+    elements.composeTo?.focus();
+    return;
+  }
+
+  if (!subject) {
+    showToast('请输入邮件主题', 'warn');
+    elements.composeSubject?.focus();
+    return;
+  }
+
+  if (!body) {
+    showToast('请输入邮件内容', 'warn');
+    elements.composeBody?.focus();
+    return;
+  }
+
+  // 验证邮箱格式
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const recipients = to.split(/[,;，；\s]+/).map(e => e.trim()).filter(Boolean);
+  for (const recipient of recipients) {
+    if (!emailRegex.test(recipient)) {
+      showToast('收件人地址格式不正确: ' + recipient, 'warn');
+      return;
+    }
+  }
+
+  try {
+    if (elements.composeSend) {
+      elements.composeSend.disabled = true;
+      elements.composeSend.textContent = '发送中...';
+    }
+
+    const response = await fetch('/api/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        from: currentMailbox,
+        to: recipients.join(','),
+        subject: subject,
+        text: body,
+        html: body.replace(/\n/g, '<br>')
+      })
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        showToast('邮件发送成功', 'success');
+        closeComposeModal();
+      } else {
+        showToast(result.message || '发送失败', 'error');
+      }
+    } else {
+      const text = await response.text();
+      showToast(text || '发送失败', 'error');
+    }
+  } catch (error) {
+    console.error('发送邮件失败:', error);
+    showToast('网络错误，请重试', 'error');
+  } finally {
+    if (elements.composeSend) {
+      elements.composeSend.disabled = false;
+      elements.composeSend.textContent = '发送';
+    }
   }
 }
 
@@ -924,7 +1065,7 @@ function extractCode(text){
 }
 
 /**
- * 列表复制：优先复制已提取验证码，否则拉取详情复制正文
+ * 列表复制：优先复制验证码，否则从已加载的 raw_content 提取
  */
 window.copyFromList = async function(ev, id){
   try{
@@ -933,17 +1074,21 @@ window.copyFromList = async function(ev, id){
     const code = (btn && btn.dataset ? String(btn.dataset.code || '').trim() : '');
     if (code){
       await navigator.clipboard.writeText(code);
-      try{ showToast('已复制验证码：' + code, 'success'); }catch(_){ }
+      showToast('已复制验证码：' + code, 'success');
       return false;
     }
-    const r = await fetch(`/api/email/${id}`);
-    if (!r.ok) throw new Error('网络错误');
-    const email = await r.json();
-    const raw = (email.html_content || email.content || '').toString();
-    const txt = `${email.subject || ''} ` + raw.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-    const fallback = extractCode(txt) || txt;
-    await navigator.clipboard.writeText(fallback);
-    try{ showToast(fallback && fallback.length<=12 ? '已复制验证码/激活码：' + fallback : '已复制邮件内容', 'success'); }catch(_){ }
+    // 从已加载的邮件列表中查找，避免额外API请求
+    const email = emails.find(e => e.id === id);
+    if (email && email.raw_content) {
+      const bodyStart = email.raw_content.indexOf('\r\n\r\n');
+      const bodyText = bodyStart > 0 ? email.raw_content.slice(bodyStart + 4) : email.raw_content;
+      const plainText = bodyText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const extracted = extractCode(email.subject + ' ' + plainText) || plainText.slice(0, 200);
+      await navigator.clipboard.writeText(extracted);
+      showToast(extracted.length <= 12 ? '已复制：' + extracted : '已复制邮件内容', 'success');
+      return false;
+    }
+    showToast('无内容可复制', 'warn');
     return false;
   }catch(_){ showToast('复制失败', 'warn'); return false; }
 };

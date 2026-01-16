@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>注册申请 - 临时邮箱</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="shortcut icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/login.css" />
+    <script src="/js/theme.js" type="module"></script>
+    <style>
+      .form-row {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+      }
+      .form-row .input {
+        flex: 1;
+        min-width: 0;
+      }
+      .form-row select {
+        flex: 0 0 auto;
+        min-width: 120px;
+        max-width: 160px;
+        height: 44px;
+        padding: 0 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--bg-color);
+        color: var(--text-primary);
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .form-row select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+      }
+      .tip {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 8px;
+        text-align: center;
+      }
+      .success-message {
+        text-align: center;
+        padding: 20px;
+      }
+      .success-message h2 {
+        color: #10b981;
+        margin-bottom: 12px;
+      }
+      .success-message p {
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+      }
+      .link-row {
+        text-align: center;
+        margin-top: 16px;
+      }
+      .link-row a {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-size: 14px;
+      }
+      .link-row a:hover {
+        text-decoration: underline;
+      }
+      .account-info {
+        background: var(--bg-muted, #f5f5f5);
+        border: 1px solid var(--border-color, #e0e0e0);
+        border-radius: 8px;
+        padding: 16px;
+        margin: 16px 0;
+        text-align: left;
+      }
+      .info-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border-color, #e0e0e0);
+      }
+      .info-row:last-child {
+        border-bottom: none;
+      }
+      .info-label {
+        color: var(--text-secondary, #666);
+        font-size: 13px;
+        min-width: 70px;
+      }
+      .info-value {
+        flex: 1;
+        font-weight: 600;
+        color: var(--text-primary, #333);
+        word-break: break-all;
+      }
+      .btn-copy {
+        padding: 4px 8px;
+        font-size: 12px;
+        background: var(--bg-color, #fff);
+        border: 1px solid var(--border-color, #e0e0e0);
+        border-radius: 4px;
+        cursor: pointer;
+        color: var(--primary-color, #0066cc);
+      }
+      .btn-copy:hover {
+        background: var(--primary-color, #0066cc);
+        color: #fff;
+      }
+      .warning-text {
+        color: #f59e0b;
+        font-size: 13px;
+        margin: 12px 0;
+      }
+      .action-buttons {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        margin: 16px 0;
+      }
+      .link-back {
+        display: inline-block;
+        margin-top: 12px;
+        color: var(--text-secondary, #666);
+        text-decoration: none;
+        font-size: 14px;
+      }
+      .link-back:hover {
+        color: var(--primary-color, #0066cc);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg"></div>
+    <button id="theme-toggle" class="theme-toggle" title="切换主题"></button>
+    <div class="center">
+      <div class="card" id="register-form">
+        <div class="logo">📝</div>
+        <h1>申请邮箱</h1>
+        <div id="err" class="err"></div>
+        <div class="form-row">
+          <input id="local-part" class="input" type="text" placeholder="用户名" />
+          <select id="domain-select">
+            <option value="">加载中...</option>
+          </select>
+        </div>
+        <input id="password" class="input" type="password" placeholder="密码（至少6位）" />
+        <input id="confirm-password" class="input" type="password" placeholder="确认密码" />
+        <button id="submit-btn" class="btn">提交申请</button>
+        <p class="tip">提交后需等待管理员审核，审核通过后即可登录使用</p>
+        <div class="link-row">
+          <a href="/html/login.html">已有账户？返回登录</a>
+        </div>
+      </div>
+      <div class="card" id="success-card" style="display: none;">
+        <div class="success-message">
+          <div class="logo">✅</div>
+          <h2>申请已提交</h2>
+          <div class="account-info">
+            <div class="info-row">
+              <span class="info-label">邮箱地址:</span>
+              <span class="info-value" id="success-email"></span>
+              <button class="btn-copy" onclick="copyText(document.getElementById('success-email').textContent)">复制</button>
+            </div>
+            <div class="info-row">
+              <span class="info-label">密码:</span>
+              <span class="info-value" id="success-password"></span>
+              <button class="btn-copy" onclick="copyText(document.getElementById('success-password').textContent)">复制</button>
+            </div>
+          </div>
+          <p class="warning-text">请妥善保存以上信息，审核通过后即可登录使用</p>
+          <div class="action-buttons">
+            <button id="export-account" class="btn btn-primary">导出账号信息</button>
+            <button id="copy-all" class="btn">一键复制</button>
+          </div>
+          <a href="/html/login.html" class="link-back">返回登录</a>
+        </div>
+      </div>
+    </div>
+    <div id="toast" class="toast"></div>
+    <script src="/js/toast-utils.js"></script>
+    <script src="/js/register.js"></script>
+  </body>
+</html>

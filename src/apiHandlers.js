@@ -405,25 +405,22 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       const limit = Math.min(parseInt(url.searchParams.get('limit') || '20', 10), 50);
       
       try{
+        // 返回完整数据，让前端解析验证码和预览
         const { results } = await db.prepare(`
-          SELECT id, sender, subject, received_at, is_read, preview, verification_code
-          FROM messages 
+          SELECT id, sender, subject, received_at, is_read, raw_content
+          FROM messages
           WHERE mailbox_id = ?${timeFilter}
-          ORDER BY received_at DESC 
+          ORDER BY received_at DESC
           LIMIT ?
         `).bind(mailboxId, ...timeParam, limit).all();
         return Response.json(results);
       }catch(e){
-        // 旧结构降级查询：从 content/html_content 计算 preview
+        // 旧结构降级查询
         const { results } = await db.prepare(`
-          SELECT id, sender, subject, received_at, is_read,
-                 CASE WHEN content IS NOT NULL AND content <> ''
-                      THEN SUBSTR(content, 1, 120)
-                      ELSE SUBSTR(COALESCE(html_content, ''), 1, 120)
-                 END AS preview
-          FROM messages 
+          SELECT id, sender, subject, received_at, is_read
+          FROM messages
           WHERE mailbox_id = ?${timeFilter}
-          ORDER BY received_at DESC 
+          ORDER BY received_at DESC
           LIMIT ?
         `).bind(mailboxId, ...timeParam, limit).all();
         return Response.json(results);
@@ -1140,6 +1137,262 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     } catch (error) {
       console.error('修改密码失败:', error);
       return new Response('修改密码失败', { status: 500 });
+    }
+  }
+
+  // ================= 用户注册申请 =================
+  // 提交注册申请（公开接口）
+  if (path === '/api/register' && request.method === 'POST') {
+    try {
+      const body = await request.json();
+      const localPart = String(body.local_part || '').trim().toLowerCase();
+      const domain = String(body.domain || '').trim().toLowerCase();
+      const password = String(body.password || '').trim();
+
+      // 验证参数
+      if (!localPart || !domain || !password) {
+        return new Response('用户名、域名和密码不能为空', { status: 400 });
+      }
+
+      // 验证用户名格式
+      if (!/^[a-z0-9._-]{1,64}$/i.test(localPart)) {
+        return new Response('用户名格式不正确（只能包含字母、数字、点、下划线、横线）', { status: 400 });
+      }
+
+      // 验证密码长度
+      if (password.length < 6) {
+        return new Response('密码长度至少6位', { status: 400 });
+      }
+
+      // 验证域名是否在允许列表中
+      const domains = isMock ? MOCK_DOMAINS : (Array.isArray(mailDomains) ? mailDomains : [(mailDomains || 'temp.example.com')]);
+      if (!domains.map(d => d.toLowerCase()).includes(domain)) {
+        return new Response('不支持的域名', { status: 400 });
+      }
+
+      const fullAddress = `${localPart}@${domain}`;
+
+      // 检查邮箱是否已存在
+      const exists = await checkMailboxExists(db, fullAddress);
+      if (exists) {
+        return new Response('该邮箱地址已被使用', { status: 409 });
+      }
+
+      // 检查是否已有待审核的申请
+      const { results: pendingResults } = await db.prepare(
+        'SELECT id FROM mailbox_registrations WHERE local_part = ? AND domain = ? AND status = ?'
+      ).bind(localPart, domain, 'pending').all();
+      if (pendingResults && pendingResults.length > 0) {
+        return new Response('该邮箱已有待审核的申请，请等待管理员审核', { status: 409 });
+      }
+
+      // 生成密码哈希
+      const passwordHash = await sha256Hex(password);
+
+      // 创建注册申请
+      await db.prepare(
+        'INSERT INTO mailbox_registrations (local_part, domain, password_hash, status) VALUES (?, ?, ?, ?)'
+      ).bind(localPart, domain, passwordHash, 'pending').run();
+
+      return Response.json({ success: true, message: '注册申请已提交，请等待管理员审核' });
+    } catch (e) {
+      console.error('提交注册申请失败:', e);
+      if (e.message && e.message.includes('UNIQUE constraint failed')) {
+        return new Response('该邮箱已有注册申请', { status: 409 });
+      }
+      return new Response('提交申请失败: ' + e.message, { status: 500 });
+    }
+  }
+
+  // 获取注册申请列表（仅管理员）
+  if (path === '/api/registrations' && request.method === 'GET') {
+    if (isMock) {
+      return Response.json([
+        { id: 1, local_part: 'demo', domain: 'exa.cc', status: 'pending', created_at: new Date().toISOString() },
+        { id: 2, local_part: 'test', domain: 'exr.yp', status: 'approved', created_at: new Date().toISOString() }
+      ]);
+    }
+    if (!isStrictAdmin()) {
+      return new Response('仅管理员可用', { status: 403 });
+    }
+    try {
+      const status = url.searchParams.get('status') || '';
+      const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 100);
+      const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10), 0);
+
+      let query = 'SELECT id, local_part, domain, status, created_at, reviewed_at, rejection_reason FROM mailbox_registrations';
+      let params = [];
+
+      if (status) {
+        query += ' WHERE status = ?';
+        params.push(status);
+      }
+
+      query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+      params.push(limit, offset);
+
+      const { results } = await db.prepare(query).bind(...params).all();
+
+      // 获取待审核数量
+      const { results: countResults } = await db.prepare(
+        'SELECT COUNT(*) as count FROM mailbox_registrations WHERE status = ?'
+      ).bind('pending').all();
+      const pendingCount = countResults?.[0]?.count || 0;
+
+      return Response.json({
+        registrations: results || [],
+        pendingCount
+      });
+    } catch (e) {
+      console.error('获取注册申请列表失败:', e);
+      return new Response('获取申请列表失败', { status: 500 });
+    }
+  }
+
+  // 批准注册申请（仅管理员）
+  if (path.match(/^\/api\/registrations\/\d+\/approve$/) && request.method === 'POST') {
+    if (isMock) return new Response('演示模式不可操作', { status: 403 });
+    if (!isStrictAdmin()) return new Response('仅管理员可用', { status: 403 });
+
+    const id = path.split('/')[3];
+    try {
+      // 获取申请信息
+      const { results } = await db.prepare(
+        'SELECT id, local_part, domain, password_hash, status FROM mailbox_registrations WHERE id = ?'
+      ).bind(id).all();
+
+      if (!results || results.length === 0) {
+        return new Response('申请不存在', { status: 404 });
+      }
+
+      const registration = results[0];
+      if (registration.status !== 'pending') {
+        return new Response('该申请已处理过', { status: 400 });
+      }
+
+      const fullAddress = `${registration.local_part}@${registration.domain}`;
+
+      // 检查邮箱是否已存在
+      const exists = await checkMailboxExists(db, fullAddress);
+      if (exists) {
+        // 邮箱已存在，标记申请为已拒绝
+        await db.prepare(
+          'UPDATE mailbox_registrations SET status = ?, reviewed_at = ?, rejection_reason = ? WHERE id = ?'
+        ).bind('rejected', new Date().toISOString(), '邮箱地址已被占用', id).run();
+        return new Response('邮箱地址已被占用', { status: 409 });
+      }
+
+      // 创建邮箱
+      const mailboxId = await getOrCreateMailboxId(db, fullAddress);
+
+      // 设置密码和登录权限
+      await db.prepare(
+        'UPDATE mailboxes SET password_hash = ?, can_login = 1 WHERE id = ?'
+      ).bind(registration.password_hash, mailboxId).run();
+
+      // 更新申请状态
+      await db.prepare(
+        'UPDATE mailbox_registrations SET status = ?, reviewed_at = ? WHERE id = ?'
+      ).bind('approved', new Date().toISOString(), id).run();
+
+      return Response.json({ success: true, address: fullAddress });
+    } catch (e) {
+      console.error('批准注册申请失败:', e);
+      return new Response('批准申请失败: ' + e.message, { status: 500 });
+    }
+  }
+
+  // 拒绝注册申请（仅管理员）
+  if (path.match(/^\/api\/registrations\/\d+\/reject$/) && request.method === 'POST') {
+    if (isMock) return new Response('演示模式不可操作', { status: 403 });
+    if (!isStrictAdmin()) return new Response('仅管理员可用', { status: 403 });
+
+    const id = path.split('/')[3];
+    try {
+      const body = await request.json();
+      const reason = String(body.reason || '').trim() || '申请被拒绝';
+
+      // 获取申请信息
+      const { results } = await db.prepare(
+        'SELECT id, status FROM mailbox_registrations WHERE id = ?'
+      ).bind(id).all();
+
+      if (!results || results.length === 0) {
+        return new Response('申请不存在', { status: 404 });
+      }
+
+      if (results[0].status !== 'pending') {
+        return new Response('该申请已处理过', { status: 400 });
+      }
+
+      // 更新申请状态
+      await db.prepare(
+        'UPDATE mailbox_registrations SET status = ?, reviewed_at = ?, rejection_reason = ? WHERE id = ?'
+      ).bind('rejected', new Date().toISOString(), reason, id).run();
+
+      return Response.json({ success: true });
+    } catch (e) {
+      console.error('拒绝注册申请失败:', e);
+      return new Response('拒绝申请失败: ' + e.message, { status: 500 });
+    }
+  }
+
+  // 删除注册申请（仅管理员）
+  if (path.match(/^\/api\/registrations\/\d+$/) && request.method === 'DELETE') {
+    if (isMock) return new Response('演示模式不可操作', { status: 403 });
+    if (!isStrictAdmin()) return new Response('仅管理员可用', { status: 403 });
+
+    const id = path.split('/')[3];
+    try {
+      const result = await db.prepare('DELETE FROM mailbox_registrations WHERE id = ?').bind(id).run();
+      const deleted = (result?.meta?.changes || 0) > 0;
+      return Response.json({ success: deleted });
+    } catch (e) {
+      console.error('删除注册申请失败:', e);
+      return new Response('删除申请失败: ' + e.message, { status: 500 });
+    }
+  }
+
+  // ================= 邮箱导出功能 =================
+  if (path === '/api/mailboxes/export' && request.method === 'GET') {
+    if (isMock) return new Response('演示模式不可导出', { status: 403 });
+    if (!isStrictAdmin()) return new Response('仅管理员可用', { status: 403 });
+
+    try {
+      const { results } = await db.prepare(`
+        SELECT
+          address,
+          created_at,
+          CASE WHEN can_login = 1 THEN '允许' ELSE '禁止' END as login_permission,
+          CASE WHEN password_hash IS NULL OR password_hash = '' THEN '默认' ELSE '自定义' END as password_type
+        FROM mailboxes
+        ORDER BY created_at DESC
+      `).all();
+
+      // 生成CSV内容
+      const headers = ['邮箱地址', '创建时间', '登录权限', '密码类型'];
+      const csvLines = [headers.join(',')];
+
+      for (const row of (results || [])) {
+        const line = [
+          `"${row.address}"`,
+          `"${row.created_at || ''}"`,
+          `"${row.login_permission}"`,
+          `"${row.password_type}"`
+        ].join(',');
+        csvLines.push(line);
+      }
+
+      const csvContent = '\uFEFF' + csvLines.join('\r\n'); // 添加BOM以支持Excel中文显示
+      const responseHeaders = new Headers({
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="mailboxes_${new Date().toISOString().split('T')[0]}.csv"`
+      });
+
+      return new Response(csvContent, { headers: responseHeaders });
+    } catch (e) {
+      console.error('导出邮箱列表失败:', e);
+      return new Response('导出失败: ' + e.message, { status: 500 });
     }
   }
 

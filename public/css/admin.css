@@ -437,3 +437,93 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* 注册审核样式 */
+.registration-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.registration-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  gap: 12px;
+}
+
+.registration-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.registration-email {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.registration-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.registration-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* 徽章 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: #ef4444;
+  border-radius: 9px;
+  margin-left: 8px;
+}
+
+.badge.hidden {
+  display: none;
+}
+
+/* 成功按钮 */
+.btn-success {
+  background: #10b981;
+  color: #fff;
+  border-color: #10b981;
+}
+
+.btn-success:hover {
+  background: #059669;
+  border-color: #059669;
+}
+
+/* 区块操作按钮 */
+.section-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 区块标题带徽章 */
+.section-title {
+  display: flex;
+  align-items: center;
+}

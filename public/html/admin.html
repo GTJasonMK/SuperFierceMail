@@ -27,6 +27,7 @@
       <span class="brand-text">管理后台</span>
     </div>
     <div class="nav-actions">
+      <button id="export-mailboxes" class="btn btn-sm btn-primary">导出邮箱</button>
       <a href="/html/mailbox.html" class="btn btn-sm">返回邮箱</a>
       <a href="/html/mailboxes.html" class="btn btn-sm">邮箱管理</a>
       <button id="theme-toggle" class="btn btn-sm">主题</button>
@@ -74,6 +75,22 @@
         <div class="section-body">
           <div id="active-mailboxes" class="stats-loading">
             <div class="spinner"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 注册审核 -->
+      <div class="admin-section">
+        <div class="section-title">
+          <span>注册审核</span>
+          <span id="pending-count-badge" class="badge hidden">0</span>
+        </div>
+        <div class="section-body">
+          <div id="registrations-list" class="stats-loading">
+            <div class="spinner"></div>
+          </div>
+          <div class="section-actions" style="margin-top:12px;">
+            <button id="refresh-registrations" class="btn btn-sm" style="width:100%;">刷新列表</button>
           </div>
         </div>
       </div>
@@ -206,6 +223,30 @@
       <div class="modal-footer">
         <button class="btn" id="add-email-cancel">取消</button>
         <button class="btn btn-primary" id="add-email-confirm">确认添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 拒绝注册申请模态框 -->
+  <div id="reject-modal" class="modal">
+    <div class="modal-box" style="max-width:400px;">
+      <div class="modal-header">
+        <span>拒绝申请</span>
+        <button class="close modal-close">x</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">申请邮箱</label>
+          <div id="reject-email" style="font-weight:bold;word-break:break-all;padding:8px;background:var(--bg-muted);border-radius:4px;"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">拒绝原因（可选）</label>
+          <textarea id="reject-reason" class="form-input" rows="3" placeholder="请输入拒绝原因..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn modal-close">取消</button>
+        <button id="reject-confirm" class="btn btn-danger">确认拒绝</button>
       </div>
     </div>
   </div>

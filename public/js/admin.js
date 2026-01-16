@@ -29,6 +29,7 @@ function closeModal(modal) {
 // 全局状态
 let domains = [];
 let pendingEmail = null; // 待添加的邮箱地址
+let pendingRejectId = null; // 待拒绝的申请ID
 
 // DOM 元素
 const els = {
@@ -59,6 +60,12 @@ const els = {
   domainStats: document.getElementById('domain-stats'),
   permissionStats: document.getElementById('permission-stats'),
 
+  // 注册审核
+  registrationsList: document.getElementById('registrations-list'),
+  pendingCountBadge: document.getElementById('pending-count-badge'),
+  refreshRegistrations: document.getElementById('refresh-registrations'),
+  exportMailboxes: document.getElementById('export-mailboxes'),
+
   // 确认模态框
   confirmModal: document.getElementById('confirm-modal'),
   confirmMessage: document.getElementById('confirm-message'),
@@ -75,6 +82,12 @@ const els = {
   addEmailClose: document.getElementById('add-email-close'),
   customPasswordGroup: document.getElementById('custom-password-group'),
 
+  // 拒绝申请模态框
+  rejectModal: document.getElementById('reject-modal'),
+  rejectEmail: document.getElementById('reject-email'),
+  rejectReason: document.getElementById('reject-reason'),
+  rejectConfirm: document.getElementById('reject-confirm'),
+
   toast: document.getElementById('toast')
 };
 
@@ -88,6 +101,9 @@ async function init() {
 
   // 加载系统统计
   await loadSystemStats();
+
+  // 加载注册申请列表
+  await loadRegistrations();
 
   // 绑定事件
   bindEvents();
@@ -355,6 +371,182 @@ function renderPermissionStats(stats) {
   `;
 }
 
+// ==================== 注册审核 ====================
+
+/**
+ * 加载注册申请列表
+ */
+async function loadRegistrations() {
+  if (!els.registrationsList) return;
+
+  try {
+    const res = await api('/api/registrations?status=pending');
+    if (res.ok) {
+      const data = await res.json();
+      renderRegistrations(data.registrations || []);
+      updatePendingBadge(data.pendingCount || 0);
+    } else {
+      els.registrationsList.innerHTML = '<div class="stats-loading">加载失败</div>';
+    }
+  } catch (e) {
+    console.error('加载注册申请失败:', e);
+    els.registrationsList.innerHTML = '<div class="stats-loading">加载失败</div>';
+  }
+}
+
+/**
+ * 更新待审核数量徽章
+ */
+function updatePendingBadge(count) {
+  if (!els.pendingCountBadge) return;
+
+  if (count > 0) {
+    els.pendingCountBadge.textContent = count;
+    els.pendingCountBadge.classList.remove('hidden');
+  } else {
+    els.pendingCountBadge.classList.add('hidden');
+  }
+}
+
+/**
+ * 渲染注册申请列表
+ */
+function renderRegistrations(registrations) {
+  if (!els.registrationsList) return;
+
+  if (!registrations || registrations.length === 0) {
+    els.registrationsList.innerHTML = '<div class="stats-loading">暂无待审核申请</div>';
+    return;
+  }
+
+  const html = registrations.map(item => {
+    const email = `${item.local_part}@${item.domain}`;
+    const createdAt = item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '-';
+
+    return `
+      <div class="registration-item" data-id="${item.id}">
+        <div class="registration-info">
+          <div class="registration-email" title="${email}">${email}</div>
+          <div class="registration-time">${createdAt}</div>
+        </div>
+        <div class="registration-actions">
+          <button class="btn btn-sm btn-success approve-btn" data-id="${item.id}">批准</button>
+          <button class="btn btn-sm btn-danger reject-btn" data-id="${item.id}" data-email="${email}">拒绝</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  els.registrationsList.innerHTML = `<div class="registration-list">${html}</div>`;
+
+  // 绑定按钮事件
+  els.registrationsList.querySelectorAll('.approve-btn').forEach(btn => {
+    btn.addEventListener('click', () => approveRegistration(btn.dataset.id));
+  });
+
+  els.registrationsList.querySelectorAll('.reject-btn').forEach(btn => {
+    btn.addEventListener('click', () => showRejectModal(btn.dataset.id, btn.dataset.email));
+  });
+}
+
+/**
+ * 批准注册申请
+ */
+async function approveRegistration(id) {
+  try {
+    const res = await api(`/api/registrations/${id}/approve`, {
+      method: 'POST'
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      showToast(`已批准: ${data.address}`, 'success');
+      loadRegistrations();
+      loadSystemStats(); // 刷新统计数据
+    } else {
+      const text = await res.text();
+      showToast(text || '批准失败', 'warn');
+    }
+  } catch (e) {
+    console.error('批准申请失败:', e);
+    showToast('批准失败', 'warn');
+  }
+}
+
+/**
+ * 显示拒绝申请模态框
+ */
+function showRejectModal(id, email) {
+  pendingRejectId = id;
+  if (els.rejectEmail) els.rejectEmail.textContent = email;
+  if (els.rejectReason) els.rejectReason.value = '';
+  openModal(els.rejectModal);
+}
+
+/**
+ * 确认拒绝申请
+ */
+async function confirmRejectRegistration() {
+  if (!pendingRejectId) return;
+
+  const reason = els.rejectReason?.value?.trim() || '';
+
+  try {
+    const res = await api(`/api/registrations/${pendingRejectId}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason })
+    });
+
+    if (res.ok) {
+      showToast('已拒绝申请', 'success');
+      closeModal(els.rejectModal);
+      pendingRejectId = null;
+      loadRegistrations();
+    } else {
+      const text = await res.text();
+      showToast(text || '拒绝失败', 'warn');
+    }
+  } catch (e) {
+    console.error('拒绝申请失败:', e);
+    showToast('拒绝失败', 'warn');
+  }
+}
+
+/**
+ * 导出邮箱列表
+ */
+async function exportMailboxes() {
+  try {
+    const res = await api('/api/mailboxes/export');
+    if (res.ok) {
+      // 获取文件名
+      const contentDisposition = res.headers.get('Content-Disposition') || '';
+      const filenameMatch = contentDisposition.match(/filename="?([^";\s]+)"?/);
+      const filename = filenameMatch ? filenameMatch[1] : `mailboxes_${new Date().toISOString().split('T')[0]}.csv`;
+
+      // 下载文件
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast('导出成功', 'success');
+    } else {
+      const text = await res.text();
+      showToast(text || '导出失败', 'warn');
+    }
+  } catch (e) {
+    console.error('导出邮箱列表失败:', e);
+    showToast('导出失败', 'warn');
+  }
+}
+
 // ==================== 邮箱生成 ====================
 
 function generateRandomString(len) {
@@ -538,6 +730,15 @@ function bindEvents() {
   // 添加邮箱模态框 - 取消
   els.addEmailCancel?.addEventListener('click', closeAddEmailModal);
   els.addEmailClose?.addEventListener('click', closeAddEmailModal);
+
+  // 注册审核 - 刷新
+  els.refreshRegistrations?.addEventListener('click', loadRegistrations);
+
+  // 导出邮箱
+  els.exportMailboxes?.addEventListener('click', exportMailboxes);
+
+  // 拒绝申请 - 确认
+  els.rejectConfirm?.addEventListener('click', confirmRejectRegistration);
 
   // 密码类型切换
   document.querySelectorAll('input[name="password-type"]').forEach(radio => {

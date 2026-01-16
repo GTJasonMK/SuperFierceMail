@@ -181,7 +181,7 @@ export async function authMiddleware(context) {
   const url = new URL(request.url);
   
   // 跳过不需要认证的路由
-  const publicPaths = ['/api/login', '/api/logout'];
+  const publicPaths = ['/api/login', '/api/logout', '/api/register', '/api/domains'];
   if (publicPaths.includes(url.pathname)) {
     return null;
   }
@@ -474,7 +474,7 @@ async function delegateApiRequest(context) {
     .filter(Boolean);
 
   // 邮箱用户只能访问自己的邮箱数据
-  if (authPayload.role === 'mailbox') {
+  if (authPayload && authPayload.role === 'mailbox') {
     return handleApiRequest(request, DB, MAIL_DOMAINS, {
       mockOnly: false,
       resendApiKey: RESEND_API_KEY,
@@ -485,12 +485,12 @@ async function delegateApiRequest(context) {
     });
   }
 
-  // 管理员可以访问所有数据
+  // 管理员或公开接口
   return handleApiRequest(request, DB, MAIL_DOMAINS, {
     mockOnly: false,
     resendApiKey: RESEND_API_KEY,
     adminName: ADMIN_NAME,
-    authPayload,
+    authPayload: authPayload || null,
     protectedMailboxes: PROTECTED_MAILBOXES
   });
 }

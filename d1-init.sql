@@ -72,7 +72,24 @@ CREATE TABLE IF NOT EXISTS sent_emails (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 邮箱注册申请表
+CREATE TABLE IF NOT EXISTS mailbox_registrations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  local_part TEXT NOT NULL,
+  domain TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at TEXT,
+  rejection_reason TEXT,
+  UNIQUE(local_part, domain)
+);
+
 -- 创建索引
+
+-- mailbox_registrations 索引
+CREATE INDEX IF NOT EXISTS idx_registrations_status ON mailbox_registrations(status);
+CREATE INDEX IF NOT EXISTS idx_registrations_created ON mailbox_registrations(created_at DESC);
 
 -- mailboxes 索引
 CREATE INDEX IF NOT EXISTS idx_mailboxes_address ON mailboxes(address);

@@ -1,9 +1,7 @@
 import { initDatabase } from './database.js';
-import { handleEmailReceive } from './apiHandlers.js';
 import { extractEmail } from './commonUtils.js';
 import { forwardByLocalPart } from './emailForwarder.js';
-import { parseEmailBody, extractVerificationCode } from './emailParser.js';
-import { createRouter, authMiddleware, resolveAuthPayload } from './routes.js';
+import { createRouter, authMiddleware } from './routes.js';
 import { createAssetManager } from './assetManager.js';
 import { getDatabaseWithValidation } from './dbConnectionHelper.js';
 
@@ -55,10 +53,10 @@ export default {
 
   /**
    * 邮件接收处理器，处理所有到达的邮件消息
-   * @param {object} message - 邮件消息对象，包含邮件内容、头部信息等
-   * @param {object} env - 环境变量对象，包含数据库连接、R2存储等
-   * @param {object} ctx - 上下文对象，包含执行上下文信息
-   * @returns {Promise<void>} 处理完成后无返回值
+   * 简化处理：只提取基本头部信息，存储原始邮件内容，查看时再解析
+   * @param {object} message - 邮件消息对象
+   * @param {object} env - 环境变量对象
+   * @param {object} ctx - 上下文对象
    */
   async email(message, env, ctx) {
     let DB;
@@ -67,15 +65,17 @@ export default {
       await initDatabase(DB);
     } catch (error) {
       console.error('邮件处理时数据库连接失败:', error.message);
-      return; // 邮件处理失败，静默失败
+      return;
     }
 
     try {
+      // 1. 提取基本头部信息（用于列表显示）
       const headers = message.headers;
       const toHeader = headers.get('to') || headers.get('To') || '';
       const fromHeader = headers.get('from') || headers.get('From') || '';
       const subject = headers.get('subject') || headers.get('Subject') || '(无主题)';
 
+      // 获取收件人地址
       let envelopeTo = '';
       try {
         const toValue = message.to;
@@ -87,68 +87,39 @@ export default {
       } catch (_) {}
 
       const resolvedRecipient = (envelopeTo || toHeader || '').toString();
-      const resolvedRecipientAddr = extractEmail(resolvedRecipient);
-      const localPart = (resolvedRecipientAddr.split('@')[0] || '').toLowerCase();
-
-      forwardByLocalPart(message, localPart, ctx, env);
-
-      // 读取原始 EML（用于存入 R2）与解析文本/HTML 以生成摘要
-      let textContent = '';
-      let htmlContent = '';
-      let rawBuffer = null;
-      try {
-        const resp = new Response(message.raw);
-        rawBuffer = await resp.arrayBuffer();
-        const rawText = await new Response(rawBuffer).text();
-        const parsed = parseEmailBody(rawText);
-        textContent = parsed.text || '';
-        htmlContent = parsed.html || '';
-        if (!textContent && !htmlContent) textContent = (rawText || '').slice(0, 100000);
-      } catch (_) {
-        textContent = '';
-        htmlContent = '';
-      }
-
       const mailbox = extractEmail(resolvedRecipient || toHeader);
       const sender = extractEmail(fromHeader);
+      const localPart = (mailbox.split('@')[0] || '').toLowerCase();
 
-      // 获取邮件原始内容（用于存储到数据库）
+      // 2. 触发转发规则（如果有配置）
+      forwardByLocalPart(message, localPart, ctx, env);
+
+      // 3. 读取原始邮件内容
       let rawContent = '';
       try {
-        if (rawBuffer) {
-          rawContent = await new Response(rawBuffer).text();
-        }
+        const resp = new Response(message.raw);
+        rawContent = await resp.text();
       } catch (e) {
-        console.error('获取邮件原始内容失败:', e);
+        console.error('读取原始邮件失败:', e);
       }
 
-      // 生成摘要与验证码（可选）
-      const preview = (() => {
-        const plain = textContent && textContent.trim() ? textContent : (htmlContent || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-        return String(plain || '').slice(0, 120);
-      })();
-      let verificationCode = '';
-      try {
-        verificationCode = extractVerificationCode({ subject, text: textContent, html: htmlContent });
-      } catch (_) {}
-
-      // 写入新表结构（仅主要信息 + R2 引用）
+      // 4. 查找或创建邮箱记录
       const resMb = await DB.prepare('SELECT id FROM mailboxes WHERE address = ?').bind(mailbox.toLowerCase()).all();
       let mailboxId;
       if (Array.isArray(resMb?.results) && resMb.results.length) {
         mailboxId = resMb.results[0].id;
       } else {
-        const [localPart, domain] = (mailbox || '').toLowerCase().split('@');
-        if (localPart && domain) {
-        await DB.prepare('INSERT INTO mailboxes (address, local_part, domain, password_hash, last_accessed_at) VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP)')
-          .bind((mailbox || '').toLowerCase(), localPart, domain).run();
-          const created = await DB.prepare('SELECT id FROM mailboxes WHERE address = ?').bind((mailbox || '').toLowerCase()).all();
+        const [lp, domain] = (mailbox || '').toLowerCase().split('@');
+        if (lp && domain) {
+          await DB.prepare('INSERT INTO mailboxes (address, local_part, domain, password_hash, last_accessed_at) VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP)')
+            .bind(mailbox.toLowerCase(), lp, domain).run();
+          const created = await DB.prepare('SELECT id FROM mailboxes WHERE address = ?').bind(mailbox.toLowerCase()).all();
           mailboxId = created?.results?.[0]?.id;
         }
       }
-      if (!mailboxId) throw new Error('无法解析或创建 mailbox 记录');
+      if (!mailboxId) throw new Error('无法解析或创建邮箱记录');
 
-      // 收件人（逗号拼接）
+      // 5. 收件人地址（逗号拼接）
       let toAddrs = '';
       try {
         const toValue = message.to;
@@ -163,21 +134,19 @@ export default {
         toAddrs = resolvedRecipient || toHeader || '';
       }
 
-      // 直接使用标准列名插入（表结构已在初始化时固定）
+      // 6. 存入数据库（只存基本信息和原始内容）
       await DB.prepare(`
-        INSERT INTO messages (mailbox_id, sender, to_addrs, subject, verification_code, preview, raw_content)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO messages (mailbox_id, sender, to_addrs, subject, raw_content)
+        VALUES (?, ?, ?, ?, ?)
       `).bind(
         mailboxId,
         sender,
         String(toAddrs || ''),
         subject || '(无主题)',
-        verificationCode || null,
-        preview || null,
         rawContent || ''
       ).run();
     } catch (err) {
-      console.error('Email event handling error:', err);
+      console.error('邮件接收处理错误:', err);
     }
   }
 };

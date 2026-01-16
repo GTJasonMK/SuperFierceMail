@@ -1,12 +1,62 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#6366f1"/>
-      <stop offset="100%" stop-color="#22d3ee"/>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fca5a5"/>
+      <stop offset="100%" stop-color="#f87171"/>
     </linearGradient>
+    <linearGradient id="mail" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-opacity="0.2"/>
+    </filter>
   </defs>
-  <rect x="6" y="10" width="52" height="44" rx="8" fill="url(#g)"/>
-  <path d="M12 18l20 14 20-14" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M12 46l14-12M52 46L38 34" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
 
+  <!-- 身体 -->
+  <ellipse cx="32" cy="42" rx="18" ry="16" fill="url(#body)" filter="url(#shadow)"/>
+
+  <!-- 头 -->
+  <circle cx="32" cy="22" r="16" fill="url(#body)" filter="url(#shadow)"/>
+
+  <!-- 耳朵 -->
+  <ellipse cx="20" cy="10" rx="6" ry="8" fill="#f87171" transform="rotate(-20 20 10)"/>
+  <ellipse cx="44" cy="10" rx="6" ry="8" fill="#f87171" transform="rotate(20 44 10)"/>
+  <ellipse cx="20" cy="10" rx="3" ry="5" fill="#fca5a5" transform="rotate(-20 20 10)"/>
+  <ellipse cx="44" cy="10" rx="3" ry="5" fill="#fca5a5" transform="rotate(20 44 10)"/>
+
+  <!-- 鼻子 -->
+  <ellipse cx="32" cy="26" rx="7" ry="5" fill="#fb7185"/>
+  <circle cx="29" cy="26" r="2" fill="#f43f5e"/>
+  <circle cx="35" cy="26" r="2" fill="#f43f5e"/>
+
+  <!-- 眼睛 -->
+  <ellipse cx="26" cy="18" rx="4" ry="5" fill="#fff"/>
+  <ellipse cx="38" cy="18" rx="4" ry="5" fill="#fff"/>
+  <circle cx="27" cy="19" r="2.5" fill="#1e293b"/>
+  <circle cx="39" cy="19" r="2.5" fill="#1e293b"/>
+  <circle cx="28" cy="18" r="1" fill="#fff"/>
+  <circle cx="40" cy="18" r="1" fill="#fff"/>
+
+  <!-- 腮红 -->
+  <ellipse cx="20" cy="24" rx="4" ry="2.5" fill="#fda4af" opacity="0.7"/>
+  <ellipse cx="44" cy="24" rx="4" ry="2.5" fill="#fda4af" opacity="0.7"/>
+
+  <!-- 微笑 -->
+  <path d="M28 30 Q32 34 36 30" fill="none" stroke="#be123c" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- 邮差帽 -->
+  <ellipse cx="32" cy="8" rx="14" ry="4" fill="#1e40af"/>
+  <path d="M18 8 Q18 0 32 0 Q46 0 46 8" fill="#2563eb"/>
+  <rect x="28" y="2" width="8" height="4" rx="1" fill="#fbbf24"/>
+
+  <!-- 信封 -->
+  <g transform="translate(36, 38) rotate(15)">
+    <rect x="0" y="0" width="20" height="14" rx="2" fill="url(#mail)" filter="url(#shadow)"/>
+    <path d="M1 2 L10 9 L19 2" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- 小手 -->
+  <ellipse cx="48" cy="42" rx="5" ry="4" fill="#fca5a5"/>
+  <ellipse cx="16" cy="44" rx="5" ry="4" fill="#fca5a5"/>
+</svg>
