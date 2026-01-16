@@ -76,3 +76,4 @@ eml/
 *.sqlite
 *.db
 CLAUDE.md
+.claude
