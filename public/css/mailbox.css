@@ -1,0 +1,235 @@
+/**
+ * mailbox.css - 邮箱用户专用样式
+ * 依赖：base.css, components.css, layout.css, utilities.css
+ */
+
+/* 页面布局 */
+body {
+  background: var(--bg-secondary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 顶栏内部容器 */
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 24px;
+  gap: 16px;
+}
+
+/* 邮箱容器布局 */
+.mailbox-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  gap: 20px;
+  width: 100%;
+}
+
+.mailbox-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 邮箱信息卡片 */
+.mailbox-info-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.mailbox-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.mailbox-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--primary-light);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  flex-wrap: wrap;
+}
+
+.mailbox-icon {
+  font-size: 20px;
+}
+
+.mailbox-address {
+  flex: 1;
+  min-width: 200px;
+  font-family: 'SF Mono', 'Monaco', monospace;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.mailbox-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* 工具栏 */
+.mailbox-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 筹码/标签 */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+}
+
+.chip-unread {
+  color: var(--primary);
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+
+.chip-total {
+  color: var(--text-muted);
+}
+
+/* 切换按钮 */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-light);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+}
+
+/* 小输入框/下拉框 */
+.select-sm,
+.input-sm {
+  height: 30px;
+  padding: 4px 10px;
+  font-size: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+
+/* 收件箱卡片 */
+.inbox-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--success);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  flex: 1;
+  min-height: 400px;
+}
+
+/* 列表头 */
+.listcard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.listcard-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+/* 页脚 */
+#footer-slot {
+  margin-top: auto;
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .topbar-inner {
+    padding: 0 16px;
+  }
+
+  .mailbox-container {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .mailbox-display {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .mailbox-address {
+    min-width: auto;
+    text-align: center;
+  }
+
+  .mailbox-actions {
+    justify-content: center;
+  }
+
+  .mailbox-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar-left,
+  .toolbar-right {
+    justify-content: center;
+  }
+
+  /* 移动端按钮始终可见 */
+  .email-actions {
+    opacity: 1;
+  }
+}

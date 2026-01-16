@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(del \"E:\\\\code\\\\webMail\\\\public\\\\css\\\\app-mobile.css\")",
+      "Bash(wrangler dev)",
+      "Bash(npx wrangler dev)",
+      "Bash(npx wrangler:*)",
+      "Bash(node node_modules/wrangler/bin/wrangler.js:*)",
+      "Bash(where:*)",
+      "Bash(wrangler dev:*)",
+      "Bash(curl:*)",
+      "Bash(tasklist:*)",
+      "Bash(del \"E:\\\\code\\\\webMail\\\\public\\\\index.html\")",
+      "Bash(del \"E:\\\\code\\\\webMail\\\\d1-init-basic.sql\")"
+    ]
+  }
+}

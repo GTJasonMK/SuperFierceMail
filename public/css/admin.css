@@ -1,0 +1,439 @@
+/**
+ * admin.css - 管理后台专属样式
+ */
+
+/* 管理后台布局 */
+.admin-layout {
+  display: flex;
+  height: calc(100vh - 48px);
+}
+
+.admin-sidebar {
+  width: 280px;
+  min-width: 280px;
+  border-right: 1px solid var(--border);
+  background: var(--bg-alt);
+  overflow-y: auto;
+}
+
+.admin-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 区块 */
+.admin-section {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.admin-sidebar .admin-section {
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-body {
+  padding: 16px;
+}
+
+/* 生成的邮箱显示 */
+.generated-email {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg-alt);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  margin-top: 8px;
+}
+
+.generated-email span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  word-break: break-all;
+}
+
+/* 表格容器 */
+.table-wrap {
+  overflow-x: auto;
+}
+
+/* 邮箱网格 */
+.mailbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.mailbox-card {
+  padding: 10px 12px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mailbox-card:hover {
+  border-color: var(--primary);
+}
+
+.mailbox-card .addr {
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-all;
+  margin-bottom: 4px;
+}
+
+.mailbox-card .meta {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+/* 统计卡片 */
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.stat-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* 统计网格 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+/* 趋势图 */
+.trend-chart {
+  min-height: 200px;
+}
+
+.trend-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 160px;
+  padding: 10px 0;
+}
+
+.trend-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.trend-bar-inner {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+}
+
+.trend-bar-fill {
+  width: 100%;
+  max-width: 40px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease;
+}
+
+.trend-bar-fill.mailbox {
+  background: var(--primary);
+}
+
+.trend-bar-fill.message {
+  background: #10b981;
+}
+
+.trend-bar-value {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.trend-bar-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.trend-legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+
+.trend-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.trend-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.trend-legend-dot.mailbox {
+  background: var(--primary);
+}
+
+.trend-legend-dot.message {
+  background: #10b981;
+}
+
+/* 统计列表 */
+.stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stats-list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stats-list-rank {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--bg-alt);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stats-list-rank.top {
+  background: var(--primary);
+  color: #fff;
+}
+
+.stats-list-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-list-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.stats-list-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-alt);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.stats-list-bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* 进度条统计 */
+.stats-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stats-progress-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stats-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.stats-progress-label {
+  color: var(--text);
+}
+
+.stats-progress-value {
+  color: var(--text-muted);
+}
+
+.stats-progress-bar {
+  height: 8px;
+  background: var(--bg-alt);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.stats-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.stats-progress-fill.primary {
+  background: var(--primary);
+}
+
+.stats-progress-fill.success {
+  background: #10b981;
+}
+
+.stats-progress-fill.warning {
+  background: #f59e0b;
+}
+
+.stats-progress-fill.danger {
+  background: #ef4444;
+}
+
+/* 加载状态 */
+.stats-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+  color: var(--text-muted);
+}
+
+/* 活跃邮箱列表 */
+.active-mailbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.active-mailbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  font-size: 12px;
+}
+
+.active-mailbox-rank {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--border);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.active-mailbox-rank.top {
+  background: var(--primary);
+  color: #fff;
+}
+
+.active-mailbox-addr {
+  flex: 1;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-mailbox-count {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .admin-sidebar {
+    width: 100%;
+    min-width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .admin-main {
+    padding: 12px;
+  }
+
+  .mailbox-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

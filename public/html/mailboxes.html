@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>邮箱管理 - 超人猛邮箱</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/base.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/css/layout.css" />
+  <link rel="stylesheet" href="/css/utilities.css" />
+  <link rel="stylesheet" href="/css/mailboxes.css" />
+</head>
+<body class="page-mailboxes">
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-icon">📧</span>
+        <span class="brand-text">超人猛邮箱 - 邮箱总览</span>
+      </div>
+      <div class="nav-actions">
+        <button id="theme-toggle" class="btn btn-ghost" title="切换主题"></button>
+        <div style="margin-right:auto"></div>
+        <a class="btn btn-ghost" href="/" title="返回首页"><span class="btn-icon">🏠</span><span class="btn-text">首页</span></a>
+        <a id="repo" class="btn btn-ghost" href="https://github.com/GTJasonMK/SuperFierceMail.git" target="_blank" rel="noopener noreferrer" title="GitHub 开源仓库">
+          <span class="btn-icon">🔗</span>
+          <span class="btn-text">GitHub</span>
+        </a>
+        <button id="logout" class="btn btn-secondary" title="退出登录"><span class="btn-icon">🚪</span><span class="btn-text">退出登录</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="main">
+      <div class="card">
+        <h2><span class="card-icon">📦</span>所有邮箱</h2>
+        <div class="toolbar">
+          <div class="searchbar">
+            <input id="q" class="search-input" placeholder="搜索邮箱地址（支持模糊）" />
+            <button id="search" class="btn btn-primary btn-sm"><span class="btn-icon">🔍</span><span>搜索</span></button>
+          </div>
+          <div class="filter-actions">
+            <select id="domain-filter" class="filter-select" title="按域名后缀筛选">
+              <option value="">全部域名</option>
+            </select>
+            <select id="login-filter" class="filter-select" title="按登录权限筛选">
+              <option value="">全部状态</option>
+              <option value="allowed">允许登录</option>
+              <option value="denied">禁止登录</option>
+            </select>
+          </div>
+          <div class="selection-actions">
+            <label class="select-all-label" title="全选/取消全选">
+              <input type="checkbox" id="select-all" />
+              <span>全选</span>
+            </label>
+            <span id="selection-count" class="selection-count hidden">已选 <strong>0</strong> 项</span>
+          </div>
+          <div class="batch-actions">
+            <button id="batch-allow" class="btn btn-ghost btn-sm" title="批量放行选中邮箱" disabled>
+              <span class="btn-icon">✅</span><span>批量放行</span>
+            </button>
+            <button id="batch-deny" class="btn btn-ghost btn-sm" title="批量禁止选中邮箱" disabled>
+              <span class="btn-icon">🚫</span><span>批量禁止</span>
+            </button>
+            <button id="batch-delete" class="btn btn-ghost btn-sm" title="批量删除选中邮箱" disabled>
+              <span class="btn-icon">🗑️</span><span>批量删除</span>
+            </button>
+          </div>
+          <div class="view-toggle">
+            <button id="view-grid" class="btn btn-ghost btn-sm active" title="卡片网格视图">
+              <span class="view-icon grid-icon"></span>
+            </button>
+            <button id="view-list" class="btn btn-ghost btn-sm" title="列表行视图">
+              <span class="view-icon list-icon"></span>
+            </button>
+          </div>
+        </div>
+        <div id="grid" class="grid"></div>
+        <div id="loading-placeholder" class="loading-placeholder">
+          <!-- 骨架屏内容将由JavaScript动态生成 -->
+        </div>
+        <div id="empty" class="empty-state hidden">
+          <div class="empty-icon">📭</div>
+          <div class="empty-title">暂无数据</div>
+        </div>
+        <div class="pager">
+          <button id="prev" class="btn btn-ghost btn-sm">上一页</button>
+          <span id="page" class="muted text-center" style="min-width:100px"></span>
+          <button id="next" class="btn btn-ghost btn-sm">下一页</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer-slot"></div>
+  <!-- 重置密码二级页（模态框） -->
+  <div class="modal hidden" id="reset-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="modal-icon">🔐</span>
+          <span>重置邮箱密码</span>
+        </div>
+        <button id="reset-close" class="close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3 text-muted">将把该邮箱的密码重置为"默认"（即邮箱地址本身）。</p>
+        <div class="modal-info-box">
+          <div class="text-xs text-muted">邮箱地址</div>
+          <div id="reset-email" class="font-bold break-all"></div>
+        </div>
+        <div class="mt-4 flex gap-3 justify-end">
+          <button id="reset-cancel" class="btn btn-secondary">取消</button>
+          <button id="reset-confirm" class="btn btn-danger">确定重置</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 登录权限确认框（模态框） -->
+  <div class="modal hidden" id="login-confirm-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="modal-icon" id="login-confirm-icon">🔒</span>
+          <span id="login-confirm-title">确认操作</span>
+        </div>
+        <button id="login-confirm-close" class="close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="login-confirm-message" class="modal-message"></p>
+        <div class="modal-email-box">
+          <div class="label">邮箱地址</div>
+          <div id="login-confirm-email" class="value"></div>
+        </div>
+        <div class="modal-actions">
+          <button id="login-confirm-cancel" class="btn btn-secondary">取消</button>
+          <button id="login-confirm-ok" class="btn btn-primary">确定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 修改密码模态框 -->
+  <div class="modal hidden" id="change-password-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="modal-icon">🔑</span>
+          <span>修改邮箱密码</span>
+        </div>
+        <button id="change-password-close" class="close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-message">为该邮箱设置新的自定义密码。</p>
+        <div class="modal-email-box mb-4">
+          <div class="label">邮箱地址</div>
+          <div id="change-password-email" class="value"></div>
+        </div>
+        <form id="change-password-form">
+          <div class="modal-form-group">
+            <label class="modal-form-label">新密码</label>
+            <input type="password" id="new-password" class="modal-form-input" placeholder="请输入新密码（至少6位）" minlength="6" required />
+          </div>
+          <div class="modal-form-group">
+            <label class="modal-form-label">确认新密码</label>
+            <input type="password" id="confirm-password" class="modal-form-input" placeholder="请再次输入新密码" minlength="6" required />
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="change-password-cancel" class="btn btn-secondary">取消</button>
+            <button type="submit" id="change-password-submit" class="btn btn-primary">修改密码</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量操作确认模态框 -->
+  <div class="modal hidden" id="batch-confirm-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="modal-icon" id="batch-confirm-icon">📝</span>
+          <span id="batch-confirm-title">批量操作确认</span>
+        </div>
+        <button id="batch-confirm-close" class="close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="batch-confirm-message" class="modal-message"></p>
+        <div class="modal-info-box">
+          <div class="text-xs text-muted">选中的邮箱</div>
+          <div id="batch-confirm-list" style="max-height:200px;overflow-y:auto;font-size:13px;"></div>
+        </div>
+        <div class="modal-actions">
+          <button id="batch-confirm-cancel" class="btn btn-secondary">取消</button>
+          <button id="batch-confirm-ok" class="btn btn-primary">确定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 删除确认模态框 -->
+  <div class="modal hidden" id="delete-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="modal-icon">🗑️</span>
+          <span>删除邮箱</span>
+        </div>
+        <button id="delete-close" class="close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-message" style="color:#dc2626;">确定要删除此邮箱吗？删除后该邮箱的所有邮件也将被删除，此操作不可恢复！</p>
+        <div class="modal-email-box">
+          <div class="label">邮箱地址</div>
+          <div id="delete-email" class="value"></div>
+        </div>
+        <div class="modal-actions">
+          <button id="delete-cancel" class="btn btn-secondary">取消</button>
+          <button id="delete-confirm" class="btn btn-danger">确定删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="/js/toast-utils.js"></script>
+  <script type="module" src="/js/mailboxes.js"></script>
+  <script src="/js/theme.js" type="module"></script>
+</body>
+</html>
+
+

@@ -1,0 +1,66 @@
+/**
+ * base.css - 极简基础
+ */
+
+:root {
+  --bg: #fff;
+  --bg-alt: #f8f8f8;
+  --text: #111;
+  --text-light: #555;
+  --text-muted: #999;
+  --border: #e5e5e5;
+  --primary: #f59e0b;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --radius: 4px;
+}
+
+[data-theme="dark"] {
+  --bg: #111;
+  --bg-alt: #1a1a1a;
+  --text: #eee;
+  --text-light: #aaa;
+  --text-muted: #666;
+  --border: #333;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { font-size: 14px; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+a { color: inherit; text-decoration: none; }
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input, select, textarea {
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }

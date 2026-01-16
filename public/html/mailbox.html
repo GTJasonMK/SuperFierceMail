@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>我的邮箱</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/app.css">
+  <script>
+    // 快速鉴权：允许 admin 和 mailbox 角色访问
+    fetch('/api/session', { headers: { 'Cache-Control': 'no-cache' } })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(s => {
+        if (s && (s.role === 'mailbox' || s.role === 'admin')) return;
+        location.replace('/login.html');
+      })
+      .catch(() => location.replace('/login.html'));
+  </script>
+</head>
+<body>
+  <!-- 顶栏 -->
+  <div class="topbar" style="height:64px;">
+    <div class="brand" style="display:flex;align-items:center;gap:12px;">
+      <span class="brand-text">我的邮箱</span>
+      <!-- 邮箱选择器（仅管理员可见） -->
+      <select id="mailbox-selector" class="form-input" style="display:none;max-width:240px;height:36px;font-size:13px;">
+        <option value="">请选择邮箱...</option>
+      </select>
+      <!-- 当前邮箱显示 -->
+      <span id="current-mailbox" style="font-size:14px;color:var(--primary);font-weight:600;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      <button id="copy-mailbox" class="btn btn-sm">复制</button>
+    </div>
+    <div class="nav-actions">
+      <!-- 管理面板入口（仅管理员可见） -->
+      <a id="admin-panel-btn" href="/html/admin.html" class="btn btn-sm btn-primary" style="display:none;">管理面板</a>
+      <button id="theme-toggle" class="btn btn-sm">主题</button>
+      <button id="change-password" class="btn btn-sm">改密码</button>
+      <button id="logout" class="btn btn-sm">退出</button>
+    </div>
+  </div>
+
+  <!-- 主布局 -->
+  <div class="app" style="height:calc(100vh - 64px);">
+    <!-- 左栏：邮件列表 -->
+    <div class="panel-left" style="width:350px;min-width:350px;">
+      <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="panel-title">收件箱</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span class="badge" id="unread-count">0 未读</span>
+          <button id="refresh-emails" class="btn btn-sm">刷新</button>
+        </div>
+      </div>
+
+      <!-- 搜索和筛选 -->
+      <div class="search-box" style="display:flex;gap:6px;">
+        <input id="search-box" style="flex:1;" placeholder="搜索发件人/主题">
+        <button id="clear-filter" class="btn btn-sm">清空</button>
+      </div>
+
+      <!-- 自动刷新 -->
+      <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:12px;">
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input id="auto-refresh" type="checkbox">
+          <span>自动刷新</span>
+        </label>
+        <select id="refresh-interval" style="height:24px;font-size:11px;padding:0 4px;">
+          <option value="10">10秒</option>
+          <option value="30" selected>30秒</option>
+          <option value="60">60秒</option>
+        </select>
+      </div>
+
+      <!-- 邮件列表 -->
+      <div class="panel-body" style="padding:0;">
+        <div id="email-list" class="mail-list"></div>
+        <div id="list-loading" class="loading hidden">
+          <div class="spinner"></div>
+          <span>加载中...</span>
+        </div>
+        <div id="empty-state" class="empty hidden">
+          <div class="empty-icon">📭</div>
+          <div>暂无邮件</div>
+          <div style="font-size:12px;margin-top:4px;">仅保留24小时内的邮件</div>
+        </div>
+      </div>
+
+      <!-- 分页 -->
+      <div id="list-pager" class="pager hidden">
+        <button id="prev-page" class="btn btn-sm">上页</button>
+        <span id="page-info" style="font-size:12px;color:var(--text-muted);"></span>
+        <button id="next-page" class="btn btn-sm">下页</button>
+      </div>
+    </div>
+
+    <!-- 右栏：邮件详情 -->
+    <div class="panel-right">
+      <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="panel-title">邮件详情</span>
+        <button id="compose-btn" class="btn btn-primary btn-sm">写邮件</button>
+      </div>
+      <div class="panel-body">
+        <div id="mail-detail" class="mail-detail">
+          <div class="empty">
+            <div class="empty-icon">📧</div>
+            <div>选择一封邮件查看</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <!-- 修改密码模态框 -->
+  <div id="password-modal" class="modal">
+    <div class="modal-box" style="max-width:360px;">
+      <div class="modal-header">
+        <span>修改密码</span>
+        <button id="password-close" class="close">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="password-form">
+          <div class="form-group">
+            <label class="form-label">当前密码</label>
+            <input id="current-password" type="password" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">新密码</label>
+            <input id="new-password" type="password" class="form-input" minlength="6" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">确认新密码</label>
+            <input id="confirm-password" type="password" class="form-input" minlength="6" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="password-cancel" class="btn">取消</button>
+        <button id="password-submit" class="btn btn-primary">修改</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 发件模态框 -->
+  <div id="compose-modal" class="modal">
+    <div class="modal-box" style="max-width:560px;">
+      <div class="modal-header">
+        <span>发送邮件</span>
+        <button id="compose-close" class="close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">收件人</label>
+          <input id="compose-to" class="form-input" placeholder="多个地址用逗号分隔">
+        </div>
+        <div class="form-group">
+          <label class="form-label">主题</label>
+          <input id="compose-subject" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">内容</label>
+          <textarea id="compose-body" class="form-input" rows="10"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="compose-cancel" class="btn">取消</button>
+        <button id="compose-send" class="btn btn-primary">发送</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/toast-utils.js"></script>
+  <script type="module" src="/js/mailbox.js"></script>
+  <script type="module" src="/js/theme.js"></script>
+</body>
+</html>

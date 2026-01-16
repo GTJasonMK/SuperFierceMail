@@ -1,0 +1,80 @@
+/**
+ * app.css - 首页专属样式（极简版）
+ */
+
+/* 邮件详情 */
+.mail-detail {
+  padding: 16px;
+}
+
+.mail-detail .header {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mail-detail .subject {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.mail-detail .meta {
+  font-size: 13px;
+  color: var(--text-light);
+}
+
+.mail-detail .meta span {
+  margin-right: 16px;
+}
+
+.mail-detail .body {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.mail-detail .body pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+}
+
+/* 验证码高亮 */
+.code-highlight {
+  display: inline-block;
+  padding: 4px 12px;
+  margin: 8px 0;
+  background: var(--primary);
+  color: #000;
+  font-weight: 600;
+  font-size: 18px;
+  border-radius: var(--radius);
+  font-family: monospace;
+}
+
+/* 发件状态 */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 999px;
+}
+
+.status-queued { color: #92400e; background: #fef3c7; }
+.status-delivered { color: #166534; background: #dcfce7; }
+.status-failed { color: #991b1b; background: #fee2e2; }
+
+/* 角色徽章 */
+.role-badge {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 999px;
+  background: var(--bg-alt);
+  color: var(--text-muted);
+}
+
+.role-admin {
+  background: var(--primary);
+  color: #000;
+}
