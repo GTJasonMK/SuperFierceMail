@@ -30,12 +30,14 @@
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .admin-sidebar .admin-section {
   border: none;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
+  box-shadow: none;
 }
 
 .section-title {
@@ -45,6 +47,17 @@
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  background: var(--primary);
+  border-radius: 2px;
 }
 
 .section-header {
@@ -129,14 +142,34 @@
   border-radius: var(--radius);
   padding: 16px;
   text-align: center;
+  position: relative;
+  overflow: hidden;
 }
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.stat-card:nth-child(1)::before { background: #3b82f6; }
+.stat-card:nth-child(2)::before { background: #10b981; }
+.stat-card:nth-child(3)::before { background: #f59e0b; }
+.stat-card:nth-child(4)::before { background: #8b5cf6; }
 
 .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: var(--primary);
   line-height: 1.2;
 }
+
+.stat-card:nth-child(1) .stat-value { color: #3b82f6; }
+.stat-card:nth-child(2) .stat-value { color: #10b981; }
+.stat-card:nth-child(3) .stat-value { color: #f59e0b; }
+.stat-card:nth-child(4) .stat-value { color: #8b5cf6; }
 
 .stat-label {
   font-size: 12px;
@@ -151,17 +184,27 @@
   gap: 16px;
 }
 
+.stats-grid .admin-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-grid .section-body {
+  flex: 1;
+  overflow: hidden;
+}
+
 /* 趋势图 */
 .trend-chart {
-  min-height: 200px;
+  height: 100%;
 }
 
 .trend-bars {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  height: 160px;
-  padding: 10px 0;
+  gap: 12px;
+  height: 140px;
+  padding: 8px 0;
 }
 
 .trend-bar {
@@ -172,36 +215,46 @@
   gap: 4px;
 }
 
-.trend-bar-inner {
+.trend-bar-group {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
   width: 100%;
+  height: 100px;
+}
+
+.trend-bar-inner {
   display: flex;
   flex-direction: column;
-  gap: 2px;
   align-items: center;
+  gap: 2px;
+  flex: 1;
+  max-width: 20px;
 }
 
 .trend-bar-fill {
   width: 100%;
-  max-width: 40px;
-  border-radius: 4px 4px 0 0;
+  border-radius: 3px 3px 0 0;
   transition: height 0.3s ease;
 }
 
 .trend-bar-fill.mailbox {
-  background: var(--primary);
+  background: linear-gradient(180deg, #3b82f6, #60a5fa);
 }
 
 .trend-bar-fill.message {
-  background: #10b981;
+  background: linear-gradient(180deg, #10b981, #34d399);
 }
 
 .trend-bar-value {
-  font-size: 10px;
-  color: var(--text-muted);
+  font-size: 9px;
+  color: var(--text);
+  font-weight: 600;
 }
 
 .trend-bar-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
 }
 
@@ -209,8 +262,9 @@
   display: flex;
   justify-content: center;
   gap: 16px;
-  margin-top: 12px;
-  font-size: 12px;
+  padding-top: 8px;
+  font-size: 11px;
+  border-top: 1px solid var(--border);
 }
 
 .trend-legend-item {
@@ -226,21 +280,27 @@
 }
 
 .trend-legend-dot.mailbox {
-  background: var(--primary);
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
 }
 
 .trend-legend-dot.message {
-  background: #10b981;
+  background: linear-gradient(135deg, #10b981, #34d399);
 }
 
 /* 统计列表 */
 .stats-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .stats-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stats-list-header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -257,11 +317,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .stats-list-rank.top {
   background: var(--primary);
-  color: #fff;
+  color: #000;
 }
 
 .stats-list-name {
@@ -271,25 +332,27 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .stats-list-value {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--primary);
+  flex-shrink: 0;
 }
 
 .stats-list-bar {
-  flex: 1;
   height: 6px;
   background: var(--bg-alt);
   border-radius: 3px;
   overflow: hidden;
+  margin-left: 28px;
 }
 
 .stats-list-bar-fill {
   height: 100%;
-  background: var(--primary);
+  background: linear-gradient(90deg, var(--primary), #f59e0b);
   border-radius: 3px;
   transition: width 0.3s ease;
 }
@@ -298,13 +361,13 @@
 .stats-progress {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .stats-progress-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .stats-progress-header {
@@ -315,10 +378,12 @@
 
 .stats-progress-label {
   color: var(--text);
+  font-weight: 500;
 }
 
 .stats-progress-value {
   color: var(--text-muted);
+  font-size: 11px;
 }
 
 .stats-progress-bar {
@@ -335,19 +400,19 @@
 }
 
 .stats-progress-fill.primary {
-  background: var(--primary);
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
 }
 
 .stats-progress-fill.success {
-  background: #10b981;
+  background: linear-gradient(90deg, #10b981, #34d399);
 }
 
 .stats-progress-fill.warning {
-  background: #f59e0b;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
 }
 
 .stats-progress-fill.danger {
-  background: #ef4444;
+  background: linear-gradient(90deg, #ef4444, #f87171);
 }
 
 /* 加载状态 */
@@ -359,44 +424,66 @@
   color: var(--text-muted);
 }
 
+/* 空数据状态 */
+.stats-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  color: var(--text-light);
+  font-size: 13px;
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
+}
+
 /* 活跃邮箱列表 */
 .active-mailbox-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .active-mailbox-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  background: var(--bg-alt);
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   font-size: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.active-mailbox-item:hover {
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .active-mailbox-rank {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  background: var(--border);
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--bg-alt);
   color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .active-mailbox-rank.top {
-  background: var(--primary);
-  color: #fff;
+  background: linear-gradient(135deg, var(--primary), #f59e0b);
+  color: #000;
 }
 
 .active-mailbox-addr {
   flex: 1;
   color: var(--text);
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -404,7 +491,11 @@
 
 .active-mailbox-count {
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 13px;
+  background: rgba(251, 191, 36, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
 }
 
 /* 移动端适配 */
@@ -442,7 +533,7 @@
 .registration-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   max-height: 300px;
   overflow-y: auto;
 }
@@ -451,11 +542,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
-  background: var(--bg-alt);
+  padding: 12px 14px;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   gap: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.registration-item:hover {
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .registration-info {
@@ -475,12 +572,12 @@
 .registration-time {
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .registration-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
 }
 

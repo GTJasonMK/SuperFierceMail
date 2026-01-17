@@ -20,6 +20,7 @@ export function getDatabase(env) {
 
   // 尝试的数据库绑定名称列表（按优先级排序）
   const possibleBindings = [
+    'superfierce_mail_db', // 当前项目绑定名称
     'TEMP_MAIL_DB',      // 原有默认名称
     'DB',                // 通用数据库绑定名称
     'DATABASE',          // 另一个常见名称

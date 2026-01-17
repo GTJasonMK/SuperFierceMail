@@ -2,6 +2,7 @@ import { handleApiRequest, handleEmailReceive } from './apiHandlers.js';
 import { createJwt, verifyJwt, buildSessionCookie, verifyMailboxLogin } from './authentication.js';
 import { extractEmail } from './commonUtils.js';
 import { getDatabaseWithValidation } from './dbConnectionHelper.js';
+import { getOrCreateMailboxId } from './database.js';
 
 /**
  * 路由处理器类，用于管理所有API路由
@@ -472,6 +473,17 @@ async function delegateApiRequest(context) {
     .split(/[,\s]+/)
     .map(e => e.trim().toLowerCase())
     .filter(Boolean);
+
+  // 自动创建受保护的邮箱（如果不存在）
+  if (PROTECTED_MAILBOXES.length > 0) {
+    for (const mailbox of PROTECTED_MAILBOXES) {
+      try {
+        await getOrCreateMailboxId(DB, mailbox);
+      } catch (e) {
+        console.error('自动创建受保护邮箱失败:', mailbox, e.message);
+      }
+    }
+  }
 
   // 邮箱用户只能访问自己的邮箱数据
   if (authPayload && authPayload.role === 'mailbox') {

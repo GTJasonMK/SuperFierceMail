@@ -49,7 +49,7 @@ async function performFirstTimeSetup(db) {
   await db.exec(`PRAGMA foreign_keys = OFF;`);
 
   // 创建表结构（仅在表不存在时）
-  await db.exec("CREATE TABLE IF NOT EXISTS mailboxes (id INTEGER PRIMARY KEY AUTOINCREMENT, address TEXT NOT NULL UNIQUE, local_part TEXT NOT NULL, domain TEXT NOT NULL, password_hash TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, last_accessed_at TEXT, expires_at TEXT, can_login INTEGER DEFAULT 0);");
+  await db.exec("CREATE TABLE IF NOT EXISTS mailboxes (id INTEGER PRIMARY KEY AUTOINCREMENT, address TEXT NOT NULL UNIQUE, local_part TEXT NOT NULL, domain TEXT NOT NULL, password_hash TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, last_accessed_at TEXT, expires_at TEXT, can_login INTEGER DEFAULT 1);");
   await db.exec("CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, mailbox_id INTEGER NOT NULL, sender TEXT NOT NULL, to_addrs TEXT NOT NULL DEFAULT '', subject TEXT NOT NULL, verification_code TEXT, preview TEXT, raw_content TEXT DEFAULT '', received_at TEXT DEFAULT CURRENT_TIMESTAMP, is_read INTEGER DEFAULT 0, FOREIGN KEY(mailbox_id) REFERENCES mailboxes(id));");
   await db.exec("CREATE TABLE IF NOT EXISTS sent_emails (id INTEGER PRIMARY KEY AUTOINCREMENT, resend_id TEXT, from_name TEXT, from_addr TEXT NOT NULL, to_addrs TEXT NOT NULL, subject TEXT NOT NULL, html_content TEXT, text_content TEXT, status TEXT DEFAULT 'queued', scheduled_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);")
 
@@ -89,7 +89,7 @@ export async function setupDatabase(db) {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       last_accessed_at TEXT,
       expires_at TEXT,
-      can_login INTEGER DEFAULT 0
+      can_login INTEGER DEFAULT 1
     );
   `);
 
@@ -182,9 +182,9 @@ export async function getOrCreateMailboxId(db, address) {
     return id;
   }
   
-  // 创建新邮箱
+  // 创建新邮箱（默认允许登录）
   await db.prepare(
-    'INSERT INTO mailboxes (address, local_part, domain, password_hash, last_accessed_at) VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP)'
+    'INSERT INTO mailboxes (address, local_part, domain, password_hash, can_login, last_accessed_at) VALUES (?, ?, ?, NULL, 1, CURRENT_TIMESTAMP)'
   ).bind(normalized, local_part, domain).run();
   
   // 查询新创建的ID

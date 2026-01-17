@@ -99,6 +99,15 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
     return Response.json(domains);
   }
 
+  // 返回受保护邮箱列表（管理员可见）
+  if (path === '/api/protected-mailboxes' && request.method === 'GET') {
+    // 检查是否为管理员（包括普通admin和strict_admin）
+    const p = getJwtPayload();
+    if (!p || p.role !== 'admin') return new Response('Forbidden', { status: 403 });
+    const protectedMailboxes = options.protectedMailboxes || [];
+    return Response.json(protectedMailboxes);
+  }
+
   if (path === '/api/generate') {
     const lengthParam = Number(url.searchParams.get('length') || 0);
     const randomId = generateRandomId(lengthParam || undefined);
@@ -818,11 +827,15 @@ export async function handleApiRequest(request, db, mailDomains, options = { moc
       // 从数据库 raw_content 字段解析邮件正文
       try{
         if (row.raw_content){
+          console.log('[DEBUG] 解析邮件:', emailId, 'raw_content长度:', row.raw_content.length);
           const parsed = parseEmailBody(row.raw_content || '');
           content = parsed.text || '';
           html_content = parsed.html || '';
+          console.log('[DEBUG] 解析结果:', { textLen: content.length, htmlLen: html_content.length });
         }
-      }catch(_){ }
+      }catch(e){
+        console.error('[DEBUG] 解析邮件失败:', emailId, e.message);
+      }
 
       // 当解析结果为空时，回退读取数据库中的 content/html_content（兼容旧数据）
       if ((!content && !html_content)){

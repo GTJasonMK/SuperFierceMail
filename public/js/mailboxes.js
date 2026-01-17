@@ -21,8 +21,8 @@ const PAGE_SIZE = 20; // 固定每页20（4列×5行）
 let lastCount = 0;
 let currentData = []; // 缓存当前显示的数据
 
-// 视图模式：'grid' 或 'list'
-let currentView = localStorage.getItem('mf:mailboxes:view') || 'grid';
+// 视图模式：'grid' 或 'list'，默认使用列表视图
+let currentView = localStorage.getItem('mf:mailboxes:view') || 'list';
 
 // 性能优化变量
 let searchTimeout = null;
@@ -31,6 +31,9 @@ let lastLoadTime = 0;
 
 // 筛选变量
 let availableDomains = []; // 可用的域名列表（从后端获取）
+
+// 受保护邮箱列表（从后端获取，这些邮箱无法删除）
+let protectedMailboxes = [];
 
 async function api(path){
   const r = await fetch(path, { headers: { 'Cache-Control':'no-cache' } });
@@ -92,32 +95,49 @@ function fmt(ts){
 }
 
 function renderGrid(items){
-  return items.map(x => `
-    <div class="mailbox-card" data-address="${x.address}">
+  console.log('[DEBUG] renderGrid 调用, protectedMailboxes:', protectedMailboxes);
+  return items.map(x => {
+    const isProtected = isProtectedMailbox(x.address);
+    const protectedBadge = isProtected ? '<span class="protected-badge" title="受保护邮箱（无法删除）">受保护</span>' : '';
+    const deleteBtn = isProtected
+      ? '<button class="btn-icon disabled" title="受保护邮箱无法删除" disabled>🗑️</button>'
+      : `<button class="btn-icon danger" title="删除邮箱" onclick="event.stopPropagation(); deleteMailbox('${x.address}')">🗑️</button>`;
+
+    return `
+    <div class="mailbox-card${isProtected ? ' protected' : ''}" data-address="${x.address}">
       <label class="mailbox-checkbox" onclick="event.stopPropagation()">
         <input type="checkbox" class="mailbox-select" data-address="${x.address}" onchange="updateSelectionState()" />
       </label>
-      <div class="line addr" title="${x.address}">${x.address}</div>
+      <div class="line addr" title="${x.address}">${x.address}${protectedBadge}</div>
       <div class="line pwd" title="${x.password_is_default ? '默认密码（邮箱本身）' : '自定义密码'}">密码：${x.password_is_default ? '默认' : '自定义'}</div>
       <div class="line login" title="邮箱登录权限">登录：${x.can_login ? '<span style="color:#16a34a">&#10003;允许</span>' : '<span style="color:#dc2626">&#10007;禁止</span>'}</div>
       <div class="line time" title="${fmt(x.created_at)}">创建：${fmt(x.created_at)}</div>
       <div class="actions">
         <button class="btn-icon" title="复制邮箱" onclick="event.stopPropagation(); copyMailboxAddressFromList('${x.address}')">📋</button>
         <button class="btn-icon ${x.can_login ? 'active' : ''}" title="${x.can_login ? '禁止邮箱登录' : '允许邮箱登录'}" onclick="event.stopPropagation(); toggleMailboxLogin('${x.address}', ${!x.can_login})">${x.can_login ? '🔓' : '🔒'}</button>
-        <button class="btn-icon danger" title="删除邮箱" onclick="event.stopPropagation(); deleteMailbox('${x.address}')">🗑️</button>
+        ${deleteBtn}
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 function renderList(items){
-  return items.map(x => `
-    <div class="mailbox-list-item" data-address="${x.address}">
+  console.log('[DEBUG] renderList 调用, protectedMailboxes:', protectedMailboxes);
+  return items.map(x => {
+    const isProtected = isProtectedMailbox(x.address);
+    console.log('[DEBUG] 检查邮箱:', x.address, '是否受保护:', isProtected);
+    const protectedBadge = isProtected ? '<span class="protected-badge" title="受保护邮箱（无法删除）">受保护</span>' : '';
+    const deleteBtn = isProtected
+      ? '<button class="btn btn-ghost btn-sm disabled" title="受保护邮箱无法删除" disabled>🗑️</button>'
+      : `<button class="btn btn-ghost btn-sm btn-danger" title="删除邮箱" onclick="event.stopPropagation(); deleteMailbox('${x.address}')">🗑️</button>`;
+
+    return `
+    <div class="mailbox-list-item${isProtected ? ' protected' : ''}" data-address="${x.address}">
       <label class="mailbox-checkbox" onclick="event.stopPropagation()">
         <input type="checkbox" class="mailbox-select" data-address="${x.address}" onchange="updateSelectionState()" />
       </label>
       <div class="mailbox-info">
-        <div class="addr" title="${x.address}">${x.address}</div>
+        <div class="addr" title="${x.address}">${x.address}${protectedBadge}</div>
         <div class="meta">
           <span class="pwd" title="${x.password_is_default ? '默认密码（邮箱本身）' : '自定义密码'}">密码：${x.password_is_default ? '默认' : '自定义'}</span>
           <span class="login" title="邮箱登录权限">登录：${x.can_login ? '<span style="color:#16a34a">&#10003;允许</span>' : '<span style="color:#dc2626">&#10007;禁止</span>'}</span>
@@ -129,15 +149,16 @@ function renderList(items){
         <button class="btn btn-ghost btn-sm" title="重置为默认密码" onclick="event.stopPropagation(); resetMailboxPassword('${x.address}')">🔁</button>
         <button class="btn btn-ghost btn-sm ${x.can_login ? 'active' : ''}" title="${x.can_login ? '禁止邮箱登录' : '允许邮箱登录'}" onclick="event.stopPropagation(); toggleMailboxLogin('${x.address}', ${!x.can_login})">${x.can_login ? '🔓' : '🔒'}</button>
         <button class="btn btn-ghost btn-sm" title="修改密码" onclick="event.stopPropagation(); changeMailboxPassword('${x.address}')">🔑</button>
-        <button class="btn btn-ghost btn-sm btn-danger" title="删除邮箱" onclick="event.stopPropagation(); deleteMailbox('${x.address}')">🗑️</button>
+        ${deleteBtn}
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 function render(items){
   const list = Array.isArray(items) ? items : [];
-  
+  console.log('[DEBUG] render 调用, currentView:', currentView, '邮箱数量:', list.length);
+
   // 缓存当前数据
   currentData = list;
   
@@ -288,22 +309,58 @@ async function loadDomains() {
  */
 function updateDomainFilter() {
   if (!els.domainFilter) return;
-  
+
   const currentValue = els.domainFilter.value;
-  
+
   // 保留"全部域名"选项，添加其他域名选项
   const options = ['<option value="">全部域名</option>'];
   availableDomains.forEach(domain => {
     const selected = currentValue === domain ? 'selected' : '';
     options.push(`<option value="${domain}" ${selected}>@${domain}</option>`);
   });
-  
+
   els.domainFilter.innerHTML = options.join('');
-  
+
   // 恢复之前选中的值
   if (currentValue && availableDomains.includes(currentValue)) {
     els.domainFilter.value = currentValue;
   }
+}
+
+/**
+ * 从后端加载受保护邮箱列表
+ */
+async function loadProtectedMailboxes() {
+  console.log('[DEBUG] loadProtectedMailboxes 开始执行');
+  try {
+    const r = await api('/api/protected-mailboxes');
+    console.log('[DEBUG] API响应状态:', r.status);
+    const data = await r.json();
+    console.log('[DEBUG] API返回数据:', data);
+    if (Array.isArray(data)) {
+      // 保存为小写，便于匹配
+      protectedMailboxes = data.map(addr => addr.toLowerCase());
+      console.log('[DEBUG] protectedMailboxes已设置:', protectedMailboxes);
+    }
+  } catch (error) {
+    // 非管理员会返回403，静默忽略
+    console.log('[DEBUG] 加载受保护邮箱列表失败:', error.message);
+    protectedMailboxes = [];
+  }
+}
+
+/**
+ * 检查邮箱是否受保护
+ */
+function isProtectedMailbox(address) {
+  if (!address || !protectedMailboxes.length) {
+    return false;
+  }
+  const result = protectedMailboxes.includes(address.toLowerCase());
+  if (result) {
+    console.log('[DEBUG] 邮箱受保护:', address);
+  }
+  return result;
 }
 
 // 防抖搜索函数
@@ -516,10 +573,15 @@ els.grid.addEventListener('click', function(event) {
 // 页面初始加载时显示加载状态
 showLoadingState(true);
 
-// 加载域名列表（与邮箱列表并行加载）
+// 加载域名列表（与主数据并行）
 loadDomains();
 
-load();
+// 先加载受保护邮箱列表，再加载邮箱数据（确保渲染时有保护信息）
+console.log('[DEBUG] 开始加载受保护邮箱列表...');
+loadProtectedMailboxes().then(() => {
+  console.log('[DEBUG] 受保护邮箱列表加载完成，开始加载邮箱数据');
+  load();
+});
 
 // 添加浏览器前进后退按钮支持
 window.addEventListener('popstate', function(event) {

@@ -439,7 +439,7 @@ function createEmailItem(email) {
         ` : '')}
       </div>
       <div class="email-actions">
-        <button class="btn btn-secondary btn-sm" data-code="${listCode || ''}" onclick="copyFromList(event, ${email.id})" title="${listCode ? '复制验证码' : '查看详情'}">
+        <button class="btn btn-secondary btn-sm" data-code="${listCode || ''}" onclick="${listCode ? `copyFromList(event, ${email.id})` : `event.stopPropagation(); viewEmailDetail(${email.id})`}" title="${listCode ? '复制验证码' : '查看详情'}">
           <span class="btn-icon">${listCode ? '📋' : '👁'}</span>
         </button>
       </div>
@@ -494,20 +494,20 @@ function applyIncrementalList(newList){
 async function viewEmailDetail(emailId) {
   try {
     const response = await fetch(`/api/email/${emailId}`);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    
+
     const email = await response.json();
-    
+
     // 标记为已读
     if (!email.is_read) {
       await markAsRead(emailId);
     }
-    
-    showEmailModal(email);
-    
+
+    showEmailInPanel(email);
+
   } catch (error) {
     console.error('获取邮件详情失败:', error);
     showToast('获取邮件详情失败: ' + error.message, 'error');
@@ -515,47 +515,34 @@ async function viewEmailDetail(emailId) {
 }
 
 /**
- * 显示邮件详情模态框
+ * 在右侧面板显示邮件详情
  */
-function showEmailModal(email) {
-  if (!elements.emailModal || !elements.modalSubject || !elements.modalContent) return;
+function showEmailInPanel(email) {
+  const panel = document.getElementById('mail-detail');
+  if (!panel) return;
 
-  // 标题
-  elements.modalSubject.innerHTML = `
-    <span class="modal-icon">📧</span>
-    <span>${escapeHtml(email.subject || '(无主题)')}</span>
-  `;
-
-  // 元信息与动作条采用普通用户样式
   const rawHtml = (email.html_content || '').toString();
   const rawText = (email.content || '').toString();
   const plainForCode = `${email.subject || ''} ` + (rawHtml || rawText).replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ').trim();
   const code = (email.verification_code || '').toString().trim() || extractCode(plainForCode);
   const toLine = currentMailbox || '';
   const timeLine = formatTime(email.received_at);
-  const subjLine = escapeHtml(email.subject || '');
 
-  elements.modalContent.innerHTML = `
-    <div class="email-meta-inline" style="margin:4px 0 8px 0;color:#334155;font-size:14px">
-      <span>发件人：${escapeHtml(email.sender || '')}</span>
-      ${toLine ? `<span style=\"margin-left:12px\">收件人：${escapeHtml(toLine)}</span>` : ''}
-      ${timeLine ? `<span style=\"margin-left:12px\">时间：${timeLine}</span>` : ''}
-      ${subjLine ? `<span style=\"margin-left:12px\">主题：${subjLine}</span>` : ''}
+  panel.innerHTML = `
+    <div class="mail-detail-header">
+      <h3 class="mail-detail-subject">${escapeHtml(email.subject || '(无主题)')}</h3>
+      <div class="mail-detail-meta">
+        <div><strong>发件人：</strong>${escapeHtml(email.sender || '')}</div>
+        ${toLine ? `<div><strong>收件人：</strong>${escapeHtml(toLine)}</div>` : ''}
+        ${timeLine ? `<div><strong>时间：</strong>${timeLine}</div>` : ''}
+      </div>
+      <div class="mail-detail-actions">
+        <button class="btn btn-sm" onclick="copyEmailAllText(this)">📋 复制内容</button>
+        ${code ? `<button class="btn btn-sm btn-primary" onclick="copyCodeInModal('${code}', this)">🔐 复制验证码: ${escapeHtml(code)}</button>` : ''}
+        ${email.download ? `<a class="btn btn-sm" href="${email.download}" download>⬇️ 下载原始邮件</a>` : ''}
+      </div>
     </div>
-    <div class="email-actions-bar">
-      <button class="btn btn-secondary btn-sm" onclick="copyEmailAllText(this)">
-        <span class="btn-icon">📋</span>
-        <span>复制内容</span>
-      </button>
-      ${code ? `
-        <button class=\"btn btn-primary btn-sm\" onclick=\"copyCodeInModal('${code}', this)\">
-          <span class=\"btn-icon\">🔐</span>
-          <span>复制验证码</span>
-        </button>
-      ` : ''}
-      ${email.download ? `<a class="btn btn-ghost btn-sm" href="${email.download}" download><span class="btn-icon">⬇️</span><span>下载原始邮件</span></a>` : ''}
-    </div>
-    <div id="email-render-host"></div>
+    <div class="mail-detail-body" id="email-render-host"></div>
   `;
 
   const host = document.getElementById('email-render-host');
@@ -563,7 +550,7 @@ function showEmailModal(email) {
     const iframe = document.createElement('iframe');
     iframe.style.width = '100%';
     iframe.style.border = '0';
-    iframe.style.minHeight = '60vh';
+    iframe.style.minHeight = '300px';
     host.appendChild(iframe);
     const doc = iframe.contentDocument || iframe.contentWindow?.document;
     if (doc){
@@ -572,7 +559,7 @@ function showEmailModal(email) {
       doc.close();
       const resize = () => {
         try{
-          const h = Math.max(doc.body?.scrollHeight || 0, doc.documentElement?.scrollHeight || 0, 400);
+          const h = Math.max(doc.body?.scrollHeight || 0, doc.documentElement?.scrollHeight || 0, 200);
           iframe.style.height = h + 'px';
         }catch(_){ }
       };
@@ -583,21 +570,12 @@ function showEmailModal(email) {
     const pre = document.createElement('pre');
     pre.style.whiteSpace = 'pre-wrap';
     pre.style.wordBreak = 'break-word';
+    pre.style.margin = '0';
+    pre.style.fontFamily = 'inherit';
     pre.textContent = rawText;
     host.appendChild(pre);
   } else {
-    host.innerHTML = '<div class="email-no-content">📭 此邮件暂无内容</div>';
-  }
-
-  elements.emailModal.classList.add('show');
-}
-
-/**
- * 关闭邮件详情模态框
- */
-function closeEmailModal() {
-  if (elements.emailModal) {
-    elements.emailModal.classList.remove('show');
+    host.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div>此邮件暂无内容</div></div>';
   }
 }
 
@@ -1039,8 +1017,27 @@ window.deleteEmail = deleteEmail;
  * 从文本中提取验证码/激活码
  */
 function extractCode(text){
-  if (!text) return '';
-  const keywords = '(?:验证码|校验码|激活码|one[-\\s]?time\\s+code|verification\\s+code|security\\s+code|two[-\\s]?factor|2fa|otp|login\\s+code|code)';
+  try {
+    if (!text || typeof text !== 'string') return '';
+
+    // 如果文本包含邮件头，先跳过邮件头部分
+    // 检测方法：查找常见邮件头字段开头（如 Received:, From:, DKIM 等）
+    const textStart = text.length > 500 ? text.substring(0, 500) : text;
+    const looksLikeEmail = /^(Received|From|To|Subject|DKIM|ARC|Date|Message-ID|Content-Type):/mi.test(textStart);
+    if (looksLikeEmail) {
+      // 这看起来是完整的 EML 格式，跳过头部
+      const bodyStart = text.indexOf('\r\n\r\n');
+      if (bodyStart > 0) {
+        text = text.substring(bodyStart + 4);
+      } else {
+        const bodyStart2 = text.indexOf('\n\n');
+        if (bodyStart2 > 0) {
+          text = text.substring(bodyStart2 + 2);
+        }
+      }
+    }
+
+    const keywords = '(?:验证码|校验码|激活码|one[-\\s]?time\\s+code|verification\\s+code|security\\s+code|two[-\\s]?factor|2fa|otp|login\\s+code|code)';
   const notFollowAlnum = '(?![0-9A-Za-z])';
   let m = text.match(new RegExp(
     keywords + "[^0-9A-Za-z]{0,20}(?:is(?:\\s*[:：])?|[:：]|为|是)?[^0-9A-Za-z]{0,10}(\\d{4,8})" + notFollowAlnum,
@@ -1057,11 +1054,16 @@ function extractCode(text){
     'i'
   ));
   if (m) return m[1];
-  m = text.match(/(?<!\d)(\d{6})(?!\d)/);
+  // 匹配独立的6位数字（避免使用 lookbehind，兼容旧浏览器）
+  m = text.match(/\b(\d{6})\b/);
   if (m) return m[1];
   m = text.match(/(\d(?:[ \t-]\d){5,7})/);
   if (m){ const digits = m[1].replace(/\D/g,''); if (digits.length>=4 && digits.length<=8) return digits; }
   return '';
+  } catch (e) {
+    console.error('extractCode error:', e);
+    return '';
+  }
 }
 
 /**

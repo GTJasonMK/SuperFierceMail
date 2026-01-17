@@ -2,9 +2,151 @@
  * app.css - 首页专属样式（极简版）
  */
 
+/* 邮件列表项 */
+.email-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.email-item:hover {
+  background: var(--bg-alt);
+}
+
+.email-item.clickable {
+  cursor: pointer;
+}
+
+.email-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.meta-from {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meta-label {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.meta-from-text {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.email-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.time-icon {
+  font-size: 12px;
+}
+
+.email-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.email-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.email-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label-chip {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--bg-alt);
+  color: var(--text-muted);
+  border-radius: 4px;
+}
+
+.value-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.value-text.subject {
+  font-weight: 500;
+}
+
+.email-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* 邮件详情 */
 .mail-detail {
   padding: 16px;
+  height: 100%;
+  overflow: auto;
+}
+
+.mail-detail-header {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mail-detail-subject {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: var(--text);
+}
+
+.mail-detail-meta {
+  font-size: 13px;
+  color: var(--text-light);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.mail-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mail-detail-body {
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .mail-detail .header {

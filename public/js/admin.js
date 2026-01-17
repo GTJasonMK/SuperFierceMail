@@ -193,7 +193,7 @@ function renderTrendChart(trend) {
   if (!els.trendChart) return;
 
   if (!trend || trend.length === 0) {
-    els.trendChart.innerHTML = '<div class="stats-loading">暂无数据</div>';
+    els.trendChart.innerHTML = '<div class="stats-empty">暂无数据</div>';
     return;
   }
 
@@ -203,17 +203,22 @@ function renderTrendChart(trend) {
   const maxVal = Math.max(maxMailboxes, maxMessages);
 
   const barsHtml = trend.map(t => {
-    const mailboxHeight = maxVal > 0 ? Math.max((t.mailboxes / maxVal) * 120, 4) : 4;
-    const messageHeight = maxVal > 0 ? Math.max((t.messages / maxVal) * 120, 4) : 4;
+    const mailboxHeight = maxVal > 0 ? Math.max((t.mailboxes / maxVal) * 80, 4) : 4;
+    const messageHeight = maxVal > 0 ? Math.max((t.messages / maxVal) * 80, 4) : 4;
+    // 只显示非零值的标签
+    const mailboxLabel = t.mailboxes > 0 ? `<span class="trend-bar-value">${t.mailboxes}</span>` : '';
+    const messageLabel = t.messages > 0 ? `<span class="trend-bar-value">${t.messages}</span>` : '';
     return `
       <div class="trend-bar">
-        <div class="trend-bar-inner">
-          <span class="trend-bar-value">${t.mailboxes}</span>
-          <div class="trend-bar-fill mailbox" style="height:${mailboxHeight}px;"></div>
-        </div>
-        <div class="trend-bar-inner">
-          <span class="trend-bar-value">${t.messages}</span>
-          <div class="trend-bar-fill message" style="height:${messageHeight}px;"></div>
+        <div class="trend-bar-group">
+          <div class="trend-bar-inner">
+            ${mailboxLabel}
+            <div class="trend-bar-fill mailbox" style="height:${mailboxHeight}px;"></div>
+          </div>
+          <div class="trend-bar-inner">
+            ${messageLabel}
+            <div class="trend-bar-fill message" style="height:${messageHeight}px;"></div>
+          </div>
         </div>
         <span class="trend-bar-label">${t.date}</span>
       </div>
@@ -242,7 +247,7 @@ function renderActiveMailboxes(mailboxes) {
   if (!els.activeMailboxes) return;
 
   if (!mailboxes || mailboxes.length === 0) {
-    els.activeMailboxes.innerHTML = '<div class="stats-loading">暂无数据</div>';
+    els.activeMailboxes.innerHTML = '<div class="stats-empty">暂无数据</div>';
     return;
   }
 
@@ -250,7 +255,7 @@ function renderActiveMailboxes(mailboxes) {
     <div class="active-mailbox-item">
       <span class="active-mailbox-rank${idx < 3 ? ' top' : ''}">${idx + 1}</span>
       <span class="active-mailbox-addr" title="${item.address}">${item.address}</span>
-      <span class="active-mailbox-count">${item.count}</span>
+      <span class="active-mailbox-count">${item.count} 封</span>
     </div>
   `).join('');
 
@@ -264,7 +269,7 @@ function renderSourceStats(sources) {
   if (!els.sourceStats) return;
 
   if (!sources || sources.length === 0) {
-    els.sourceStats.innerHTML = '<div class="stats-loading">暂无数据</div>';
+    els.sourceStats.innerHTML = '<div class="stats-empty">暂无数据</div>';
     return;
   }
 
@@ -272,12 +277,14 @@ function renderSourceStats(sources) {
 
   const html = sources.map((item, idx) => `
     <div class="stats-list-item">
-      <span class="stats-list-rank${idx < 3 ? ' top' : ''}">${idx + 1}</span>
-      <span class="stats-list-name" title="${item.domain}">${item.domain}</span>
+      <div class="stats-list-header">
+        <span class="stats-list-rank${idx < 3 ? ' top' : ''}">${idx + 1}</span>
+        <span class="stats-list-name" title="${item.domain}">${item.domain}</span>
+        <span class="stats-list-value">${item.count}</span>
+      </div>
       <div class="stats-list-bar">
         <div class="stats-list-bar-fill" style="width:${(item.count / maxCount) * 100}%;"></div>
       </div>
-      <span class="stats-list-value">${item.count}</span>
     </div>
   `).join('');
 
@@ -291,7 +298,7 @@ function renderDomainStats(domains) {
   if (!els.domainStats) return;
 
   if (!domains || domains.length === 0) {
-    els.domainStats.innerHTML = '<div class="stats-loading">暂无数据</div>';
+    els.domainStats.innerHTML = '<div class="stats-empty">暂无数据</div>';
     return;
   }
 
@@ -301,7 +308,7 @@ function renderDomainStats(domains) {
     <div class="stats-progress-item">
       <div class="stats-progress-header">
         <span class="stats-progress-label">${item.domain}</span>
-        <span class="stats-progress-value">${item.count} (${item.percentage}%)</span>
+        <span class="stats-progress-value">${item.count} 个 (${item.percentage}%)</span>
       </div>
       <div class="stats-progress-bar">
         <div class="stats-progress-fill ${colors[idx % colors.length]}" style="width:${item.percentage}%;"></div>
@@ -322,7 +329,7 @@ function renderPermissionStats(stats) {
   const totalPwd = (stats.defaultPassword || 0) + (stats.customPassword || 0);
 
   if (total === 0) {
-    els.permissionStats.innerHTML = '<div class="stats-loading">暂无数据</div>';
+    els.permissionStats.innerHTML = '<div class="stats-empty">暂无数据</div>';
     return;
   }
 
@@ -415,7 +422,7 @@ function renderRegistrations(registrations) {
   if (!els.registrationsList) return;
 
   if (!registrations || registrations.length === 0) {
-    els.registrationsList.innerHTML = '<div class="stats-loading">暂无待审核申请</div>';
+    els.registrationsList.innerHTML = '<div class="stats-empty">暂无待审核申请</div>';
     return;
   }
 

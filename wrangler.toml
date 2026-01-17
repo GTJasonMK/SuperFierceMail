@@ -3,6 +3,11 @@ name = "superfierce-mail"
 main = "src/server.js"
 compatibility_date = "2024-01-01"
 
+# 自定义域名路由（注释掉可恢复仅 workers.dev 访问）
+# routes = [
+#   { pattern = "www.mail.imggb.top/*", zone_name = "imggb.top" }
+# ]
+
 # D1 数据库绑定
 [[d1_databases]]
 binding = "superfierce_mail_db"
